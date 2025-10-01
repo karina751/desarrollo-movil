@@ -1,196 +1,315 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { auth } from '../src/config/firebaseConfig';
+import { auth, db } from '../src/config/firebaseConfig'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore'; 
+import { LinearGradient } from 'expo-linear-gradient'; 
 
 export default function SignUp({ navigation }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    // Estados para los campos de entrada
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    
+    // Estados para mostrar/ocultar contraseña
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    
+    // Estados para mensajes de error de validación en la interfaz
+    const [passwordError, setPasswordError] = useState('');
+    const [confirmError, setConfirmError] = useState('');
 
-  const handleSignUp = async () => {
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert("Error", "Todos los campos son obligatorios.");
-      return;
-    }
+    const handleSignUp = async () => {
+        // 1. Validación: Campos Obligatorios
+        if (!firstName || !lastName || !email || !password || !confirmPassword) {
+            Alert.alert("Error", "Todos los campos son obligatorios.");
+            return;
+        }
 
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Las contraseñas no coinciden.");
-      return;
-    }
+        // 2. Validación: Contraseñas Coincidentes
+        if (password !== confirmPassword) {
+            setConfirmError("Las contraseñas no coinciden.");
+            setPasswordError('');
+            return;
+        } else {
+            setConfirmError(''); 
+        }
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{6,}$/;
-    if (!passwordRegex.test(password)) {
-      Alert.alert(
-        "Error",
-        "La contraseña debe tener al menos 6 caracteres, incluyendo una letra mayúscula, una minúscula y un número."
-      );
-      return;
-    }
+        // 3. Validación: Complejidad de Contraseña (Mínimo 8, 1 mayús, 1 minús, 1 número)
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            setPasswordError("La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula y un número.");
+            setConfirmError(''); 
+            return;
+        } else {
+            setPasswordError(''); 
+        }
 
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      Alert.alert("Registro exitoso", "Usuario registrado con éxito.");
-      navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); 
-    } catch (error) {
-      let errorMessage = "Hubo un problema al registrar el usuario.";
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          errorMessage = "El correo electrónico ya está en uso.";
-          break;
-        case 'auth/invalid-email':
-          errorMessage = "El formato del correo electrónico no es válido.";
-          break;
-        case 'auth/weak-password':
-          errorMessage = "La contraseña es demasiado débil.";
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = "Error de conexión, por favor intenta más tarde.";
-          break;
-      }
-      Alert.alert("Error", errorMessage);
-    }
-  };
+        try {
+            // Registrar usuario en Firebase Auth
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
 
-  return (
-    <View style={styles.container}>
-      <Image source={require('../assets/logo.png')} style={styles.logo} />
-      <Text style={styles.title}>Regístrate</Text>
+            // Guardar datos adicionales en Firestore
+            await setDoc(doc(db, "users", user.uid), {
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                createdAt: new Date()
+            });
+            
+            // ÉXITO
+            Alert.alert("Registro exitoso", "Cuenta creada y datos guardados. Serás redirigido a Login.");
+            navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); 
+        } catch (error) {
+            let errorMessage = "Hubo un problema al registrar el usuario.";
+            
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = "El correo electrónico ya está en uso. Intente con otro.";
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = "El formato del correo electrónico no es válido.";
+                    break;
+                case 'auth/network-request-failed':
+                    errorMessage = "Error de conexión, por favor intenta más tarde.";
+                    break;
+            }
+            // ERROR
+            Alert.alert("Error", errorMessage);
+        }
+    };
 
-      <Text style={styles.label}>Nombre</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="user" size={20} color="#ccc" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Ingrese su nombre"
-          value={firstName}
-          onChangeText={setFirstName}
-        />
-      </View>
+    return (
+        <LinearGradient
+            colors={['#97c1e6', '#e4eff9']} 
+            start={{ x: 0.5, y: 0 }}       
+            end={{ x: 0.5, y: 1 }}         
+            style={styles.contenedorFondo}
+        >
+            <ScrollView contentContainerStyle={styles.scrollContenido}>
+                
+                <View style={styles.contenedorBlanco}>
+                    
+                    <View style={styles.contenedorLogo}>
+                        <View style={styles.bordeLogo}>
+                            <Image source={require('../assets/logo.png')} style={styles.logo} /> 
+                        </View>
+                        <Text style={styles.nombreApp}>TecnoSeguridad</Text>
+                    </View>
 
-      <Text style={styles.label}>Apellido</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="user" size={20} color="#ccc" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Ingrese su apellido"
-          value={lastName}
-          onChangeText={setLastName}
-        />
-      </View>
+                    <Text style={styles.titulo}>Crear una Cuenta</Text>
 
-      <Text style={styles.label}>Correo</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="envelope" size={20} color="#ccc" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Ingrese su correo"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
+                    {/* Campo Nombre */}
+                    <Text style={styles.etiqueta}>Nombre</Text>
+                    <View style={styles.campoContenedor}>
+                        <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
+                        <TextInput
+                            style={styles.campoEntrada}
+                            placeholder="Ingrese su nombre"
+                            value={firstName}
+                            onChangeText={setFirstName}
+                        />
+                    </View>
 
-      <Text style={styles.label}>Contraseña</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="lock" size={20} color="#ccc" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Ingrese su contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#ccc" />
-        </TouchableOpacity>
-      </View>
+                    {/* Campo Apellido */}
+                    <Text style={styles.etiqueta}>Apellido</Text>
+                    <View style={styles.campoContenedor}>
+                        <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
+                        <TextInput
+                            style={styles.campoEntrada}
+                            placeholder="Ingrese su apellido"
+                            value={lastName}
+                            onChangeText={setLastName}
+                        />
+                    </View>
 
-      <Text style={styles.label}>Confirmar Contraseña</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="lock" size={20} color="#ccc" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirme su contraseña"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry={!showConfirmPassword}
-        />
-        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-          <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#ccc" />
-        </TouchableOpacity>
-      </View>
+                    {/* Campo Correo Electrónico */}
+                    <Text style={styles.etiqueta}>Correo Electrónico</Text>
+                    <View style={styles.campoContenedor}>
+                        <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
+                        <TextInput
+                            style={styles.campoEntrada}
+                            placeholder="tecnoseguridad@gmail.com"
+                            value={email}
+                            onChangeText={setEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                        />
+                    </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-        <Text style={styles.buttonText}>Registrarse</Text>
-      </TouchableOpacity>
+                    {/* Campo Contraseña */}
+                    <Text style={styles.etiqueta}>Contraseña</Text>
+                    <View style={styles.campoContenedor}>
+                        <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
+                        <TextInput
+                            style={styles.campoEntrada}
+                            placeholder="Ingrese su contraseña"
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry={!showPassword}
+                        />
+                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                        </TouchableOpacity>
+                    </View>
+                    {passwordError ? <Text style={styles.textoError}>{passwordError}</Text> : null}
 
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.signUpText}>¿Ya tienes cuenta? Inicia sesión</Text>
-      </TouchableOpacity>
-    </View>
-  );
+                    {/* Campo Confirmar Contraseña */}
+                    <Text style={styles.etiqueta}>Confirmar Contraseña</Text>
+                    <View style={styles.campoContenedor}>
+                        <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
+                        <TextInput
+                            style={styles.campoEntrada}
+                            placeholder="Confirme su contraseña"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            secureTextEntry={!showConfirmPassword}
+                        />
+                        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                            <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                        </TouchableOpacity>
+                    </View>
+                    {confirmError ? <Text style={styles.textoError}>{confirmError}</Text> : null}
+
+                    <TouchableOpacity style={styles.botonPrincipal} onPress={handleSignUp}>
+                        <Text style={styles.textoBotonPrincipal}>Registrarse</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.contenedorRegistro}>
+                        <Text style={styles.textoRegistroGris}>¿Ya tienes cuenta? </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                            <Text style={styles.textoRegistroLink}>Inicia Sesión</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </ScrollView>
+        </LinearGradient>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  label: {
-    alignSelf: 'flex-start',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderColor: '#b9770e',
-    marginBottom: 20,
-    width: '100%',
-  },
-  icon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    height: 40,
-  },
-  button: {
-    backgroundColor: '#922b21',
-    paddingVertical: 10,
-    paddingHorizontal: 40,
-    borderRadius: 5,
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  signUpText: {
-    marginTop: 20,
-    color: '#007AFF',
-  },
+    contenedorFondo: {
+        flex: 1, 
+    },
+    scrollContenido: {
+        flexGrow: 1, 
+        paddingVertical: 10, 
+        paddingHorizontal: 30, 
+        alignItems: 'center', 
+        width: '100%',
+        alignSelf: 'center',
+    },
+    contenedorBlanco: {
+        backgroundColor: '#fff',
+        width: '100%', 
+        flex: 1, // ¡CLAVE: La tarjeta ocupa todo el espacio restante!
+        borderRadius: 10, 
+        paddingVertical: 30, 
+        paddingHorizontal: 25,
+        alignItems: 'center',
+        maxWidth: 700, 
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 10,
+    },
+    // --- Estilos de Login Replicados ---
+    contenedorRegistro: {
+        flexDirection: 'row',
+        marginTop: 25,
+        alignItems: 'baseline',
+    },
+    textoRegistroGris: {
+        color: '#555', 
+        fontSize: 14,
+    },
+    textoRegistroLink: {
+        color: '#007AFF', 
+        fontSize: 14,
+        textDecorationLine: 'underline',
+        fontWeight: '600',
+    },
+    contenedorLogo: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    bordeLogo: {
+        borderRadius: 15, 
+        padding: 5,
+        borderWidth: 3,
+        borderColor: '#fff',
+        backgroundColor: '#007AFF',
+    },
+    logo: {
+        width: 80,
+        height: 80,
+        borderRadius: 10,
+    },
+    nombreApp: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#007AFF', 
+        marginTop: 5,
+    },
+    titulo: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#007AFF', 
+        marginBottom: 20,
+    },
+    etiqueta: {
+        alignSelf: 'flex-start',
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#007AFF', 
+        marginTop: 10,
+        marginBottom: 5,
+        width: '100%',
+    },
+    campoContenedor: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f8ff', 
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#007AFF', 
+        marginBottom: 10,
+        paddingHorizontal: 10,
+        width: '100%',
+    },
+    icono: {
+        marginRight: 10,
+    },
+    campoEntrada: {
+        flex: 1,
+        height: 45,
+        color: '#333',
+    },
+    textoError: {
+        color: '#FF4136', 
+        fontSize: 12,
+        marginBottom: 5,
+        alignSelf: 'flex-start',
+        width: '100%',
+        paddingLeft: 5, 
+    },
+    botonPrincipal: {
+        backgroundColor: '#1E90FF', 
+        paddingVertical: 12,
+        paddingHorizontal: 40,
+        borderRadius: 10,
+        marginTop: 20,
+        width: '100%',
+        alignItems: 'center',
+    },
+    textoBotonPrincipal: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
 });
