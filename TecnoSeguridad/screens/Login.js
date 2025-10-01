@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, Image, StyleSheet, ScrollView } from 'react-native'; 
+import { 
+    View, 
+    Text, 
+    TextInput, 
+    TouchableOpacity, 
+    Alert, 
+    Image, 
+    StyleSheet, 
+    ScrollView, 
+    Platform,
+    KeyboardAvoidingView // ⬅️ ¡CRÍTICO! Necesario para evitar la pantalla blanca si se usa
+} from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
-import { LinearGradient } from 'expo-linear-gradient'; 
+import { LinearGradient } from 'expo-linear-gradient'; // ⬅️ ¡CRÍTICO! Necesario para la pantalla blanca si se usa
 
 export default function Login({ navigation }) {
     const [email, setEmail] = useState('');
@@ -41,72 +52,78 @@ export default function Login({ navigation }) {
     return (
         <LinearGradient
             colors={['#97c1e6', '#e4eff9']} 
-            start={{ x: 0.5, y: 0 }}       
-            end={{ x: 0.5, y: 1 }}         
+            start={{ x: 0.5, y: 0 }}       
+            end={{ x: 0.5, y: 1 }}         
             style={styles.contenedorFondo}
         >
-            <ScrollView contentContainerStyle={styles.scrollContenido}>
-                
-                <View style={styles.contenedorBlanco}>
+            <KeyboardAvoidingView 
+                behavior={Platform.OS === "ios" ? "padding" : "height"} 
+                style={styles.contenedorFondo}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContenido}>
                     
-                    <View style={styles.contenedorLogo}>
-                        <View style={styles.bordeLogo}>
-                            <Image source={require('../assets/logo.png')} style={styles.logo} /> 
+                    <View style={styles.contenedorBlanco}>
+                        
+                        <View style={styles.contenedorLogo}>
+                            <View style={styles.bordeLogo}>
+                                {/* 🚨 RUTA DE IMAGEN CRÍTICA 🚨: Verifica que exista en esta ruta */}
+                                <Image source={require('../assets/logo.png')} style={styles.logo} /> 
+                            </View>
+                            <Text style={styles.nombreApp}>TecnoSeguridad</Text>
                         </View>
-                        <Text style={styles.nombreApp}>TecnoSeguridad</Text>
-                    </View>
 
-                    <Text style={styles.titulo}>Iniciar Sesión</Text>
+                        <Text style={styles.titulo}>Iniciar Sesión</Text>
 
-                    <Text style={styles.etiqueta}>Correo Electrónico</Text>
-                    <View style={styles.campoContenedor}>
-                        <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
-                        <TextInput
-                            style={styles.campoEntrada}
-                            placeholder="tecnoseguridad@gmail.com"
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                        />
-                    </View>
+                        <Text style={styles.etiqueta}>Correo Electrónico</Text>
+                        <View style={styles.campoContenedor}>
+                            <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
+                            <TextInput
+                                style={styles.campoEntrada}
+                                placeholder="tecnoseguridad@gmail.com"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                            />
+                        </View>
 
-                    <Text style={styles.etiqueta}>Contraseña</Text>
-                    <View style={styles.campoContenedor}>
-                        <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
-                        <TextInput
-                            style={styles.campoEntrada}
-                            placeholder="Contraseña"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={!showPassword}
-                        />
-                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                        <Text style={styles.etiqueta}>Contraseña</Text>
+                        <View style={styles.campoContenedor}>
+                            <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
+                            <TextInput
+                                style={styles.campoEntrada}
+                                placeholder="Contraseña"
+                                value={password}
+                                onChangeText={setPassword}
+                                secureTextEntry={!showPassword}
+                            />
+                            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <TouchableOpacity style={styles.botonOlvido}>
+                            <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
                         </TouchableOpacity>
-                    </View>
-                    
-                    <TouchableOpacity style={styles.botonOlvido}>
-                        <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
-                        <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.botonGoogle}>
-                        <FontAwesome name="google" size={20} color="#db4437" style={styles.iconoGoogle} /> 
-                        <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
-                    </TouchableOpacity>
-
-                    <View style={styles.contenedorRegistro}>
-                        <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                            <Text style={styles.textoRegistroLink}>Regístrate aquí</Text>
+                        <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
+                            <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
                         </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.botonGoogle}>
+                            <FontAwesome name="google" size={20} color="#db4437" style={styles.iconoGoogle} /> 
+                            <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.contenedorRegistro}>
+                            <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+                                <Text style={styles.textoRegistroLink}>Regístrate aquí</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </LinearGradient>
     );
 }
@@ -117,22 +134,18 @@ const styles = StyleSheet.create({
     },
     scrollContenido: {
         flexGrow: 1, 
-        // ❌ Eliminamos justifyContent: 'center'
-        paddingVertical: 10, // ✅ Creamos el margen azul arriba y abajo de 10px
+        justifyContent: 'center', 
+        paddingVertical: 10, 
         paddingHorizontal: 30, 
         alignItems: 'center', 
         width: '100%',
-        alignSelf: 'center',
     },
     contenedorBlanco: {
         backgroundColor: '#fff',
         width: '100%', 
-        // 👇 CLAVE: flex: 1 obliga a la tarjeta a crecer y ocupar todo el espacio disponible
-        flex: 1, 
-        borderRadius: 10, 
-        // ❌ Eliminamos marginTop y marginBottom (ahora lo maneja el padding del ScrollView)
-        paddingVertical: 30, 
+        paddingVertical: 20, // Ajuste para reducir el tamaño
         paddingHorizontal: 25,
+        borderRadius: 10, 
         alignItems: 'center',
         maxWidth: 700, 
         shadowColor: '#000',
@@ -141,7 +154,6 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 10,
     },
-    // Estilos restantes (se mantienen igual)
     contenedorRegistro: {
         flexDirection: 'row',
         marginTop: 25,
