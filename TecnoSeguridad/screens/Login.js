@@ -93,7 +93,7 @@ export default function Login({ navigation }) {
                             secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />  
                         </TouchableOpacity>
                     </View>
                     
@@ -128,7 +128,6 @@ const styles = StyleSheet.create({
     },
     scrollContenido: {
         flexGrow: 1, 
-        // 🎯 AJUSTE: Quitamos el centrado para asegurar que el scroll funcione inmediatamente
         // justifyContent: 'center', 
         paddingVertical: 0, 
         paddingHorizontal: 30, 
@@ -138,7 +137,6 @@ const styles = StyleSheet.create({
     contenedorBlanco: {
         backgroundColor: '#fff',
         width: '100%', 
-        // 🚨 CRÍTICO: NO tiene flex: 1.
         paddingVertical: 15, // Mínimo padding interior
         paddingHorizontal: 25,
         borderRadius: 10, 
