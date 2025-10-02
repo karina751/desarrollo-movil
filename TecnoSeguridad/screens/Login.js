@@ -123,14 +123,18 @@ export default function Login({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    contenedorFondo: {
+    ontenedorFondo: {
         flex: 1, 
     },
     scrollContenido: {
         flexGrow: 1, 
-        // 🎯 AJUSTE: Quitamos el centrado para asegurar que el scroll funcione inmediatamente
-        // justifyContent: 'center', 
-        paddingVertical: 0, 
+        
+        //CENTRADO: Para que la tarjeta esté en el medio de la pantalla
+        justifyContent: 'center', 
+        
+        // RESTAURAR ESPACIADO: Agregamos padding vertical arriba y abajo
+        paddingVertical: 25, 
+        
         paddingHorizontal: 30, 
         alignItems: 'center', 
         width: '100%',
