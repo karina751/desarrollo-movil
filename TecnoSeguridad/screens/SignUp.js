@@ -109,7 +109,7 @@ export default function SignUp({ navigation }) {
                         <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Ingrese su nombre"
+                            placeholder="Ingrese su Nombre"
                             value={firstName}
                             onChangeText={setFirstName}
                         />
@@ -121,7 +121,7 @@ export default function SignUp({ navigation }) {
                         <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Ingrese su apellido"
+                            placeholder="Ingrese su Apellido"
                             value={lastName}
                             onChangeText={setLastName}
                         />
@@ -147,7 +147,7 @@ export default function SignUp({ navigation }) {
                         <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Ingrese su contraseña"
+                            placeholder="Ingrese su Contraseña"
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
@@ -164,7 +164,7 @@ export default function SignUp({ navigation }) {
                         <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Confirme su contraseña"
+                            placeholder="Confirme su Contraseña"
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             secureTextEntry={!showConfirmPassword}
@@ -206,9 +206,9 @@ const styles = StyleSheet.create({
     contenedorBlanco: {
         backgroundColor: '#fff',
         width: '100%', 
-        flex: 1, // ¡CLAVE: La tarjeta ocupa todo el espacio restante!
+        flex: 1, 
         borderRadius: 10, 
-        paddingVertical: 30, 
+        paddingVertical: 20, 
         paddingHorizontal: 25,
         alignItems: 'center',
         maxWidth: 700, 
