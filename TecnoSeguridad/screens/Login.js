@@ -7,7 +7,7 @@ import {
     Alert, 
     Image, 
     StyleSheet, 
-    ScrollView, 
+    ScrollView, // Componente para que la pantalla sea desplazable
 } from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -28,6 +28,7 @@ export default function Login({ navigation }) {
         try {
             await signInWithEmailAndPassword(auth, email, password);
             Alert.alert("Login exitoso", "Has iniciado sesión correctamente.");
+            // Navega a Home y resetea el stack (quita la pantalla de Login del historial)
             navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
         } catch (error) {
             let errorMessage = "Hubo Algun un problema al iniciar sesión.";
@@ -50,18 +51,17 @@ export default function Login({ navigation }) {
     return (
         <LinearGradient
             colors={['#97c1e6', '#e4eff9']} 
-            start={{ x: 0.5, y: 0 }}       
-            end={{ x: 0.5, y: 1 }}         
+            start={{ x: 0.5, y: 0 }} 
+            end={{ x: 0.5, y: 1 }} 
             style={styles.contenedorFondo}
         >
-            {/* Estructura simple y robusta para scroll */}
+            {/* 1. Cambio CLAVE: Usar contentContainerStyle con flexGrow: 1 */}
             <ScrollView contentContainerStyle={styles.scrollContenido}>
                 
                 <View style={styles.contenedorBlanco}>
                     
                     <View style={styles.contenedorLogo}>
                         <View style={styles.bordeLogo}>
-                            {/* Verifica la ruta de tu logo: '../assets/logo.png' */}
                             <Image source={require('../assets/logo.png')} style={styles.logo} /> 
                         </View>
                         <Text style={styles.nombreApp}>TecnoSeguridad</Text>
@@ -130,6 +130,11 @@ const styles = StyleSheet.create({
         flexGrow: 1, 
         // justifyContent: 'center', 
         paddingVertical: 0, 
+        // 🚨 AJUSTE 2: Se puede usar 'justifyContent: 'center' para centrar la tarjeta,
+        // pero podría interferir con el scroll al abrir el teclado. 'minHeight' y 'justifyContent'
+        // son a menudo conflictivos si se busca una solución universal.
+        justifyContent: 'center', // Para centrar la tarjeta verticalmente en el medio
+        paddingVertical: 40, // Dejamos padding para espacio en los bordes superior/inferior
         paddingHorizontal: 30, 
         alignItems: 'center', 
         width: '100%',
@@ -137,7 +142,7 @@ const styles = StyleSheet.create({
     contenedorBlanco: {
         backgroundColor: '#fff',
         width: '100%', 
-        paddingVertical: 15, // Mínimo padding interior
+        paddingVertical: 60, // Aumenta el padding interno para que la tarjeta se vea más grande
         paddingHorizontal: 25,
         borderRadius: 10, 
         alignItems: 'center',
@@ -148,7 +153,7 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 10,
     },
-    // Estilos internos con márgenes y paddings reducidos para conservar espacio
+    // ... (otros estilos sin cambios críticos)
     contenedorRegistro: {
         flexDirection: 'row',
         marginTop: 15, 
@@ -216,9 +221,8 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     campoEntrada: {
-        // 🚨 CRÍTICO: Eliminamos 'flex: 1' para evitar dimensionamiento excesivo
         height: 40, 
-        width: '85%', // Aseguramos que ocupe el espacio principal
+        width: '85%', 
         color: '#333',
     },
     botonOlvido: {
@@ -262,6 +266,6 @@ const styles = StyleSheet.create({
     textoBotonGoogle: {
         color: '#007AFF', 
         fontSize: 14, 
-        fontWeight: 'normal', 
-    },
+        fontWeight: 'normal', 
+},
 });

@@ -99,8 +99,8 @@ export default function SignUp({ navigation }) {
     return (
         <LinearGradient
             colors={['#97c1e6', '#e4eff9']} 
-            start={{ x: 0.5, y: 0 }}       
-            end={{ x: 0.5, y: 1 }}         
+            start={{ x: 0.5, y: 0 }}  
+            end={{ x: 0.5, y: 1 }}  
             style={styles.contenedorFondo}
         >
             <KeyboardAvoidingView
@@ -134,7 +134,7 @@ export default function SignUp({ navigation }) {
                             <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
                             <TextInput
                                 style={styles.campoEntrada}
-                                placeholder="Ingrese su nombre"
+                                placeholder="Ingrese su Nombre"
                                 value={firstName}
                                 onChangeText={setFirstName}
                                 autoCapitalize="words" 
@@ -147,7 +147,7 @@ export default function SignUp({ navigation }) {
                             <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
                             <TextInput
                                 style={styles.campoEntrada}
-                                placeholder="Ingrese su apellido"
+                                placeholder="Ingrese su Apellido"
                                 value={lastName}
                                 onChangeText={setLastName}
                                 autoCapitalize="words" 
@@ -174,7 +174,7 @@ export default function SignUp({ navigation }) {
                             <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                             <TextInput
                                 style={styles.campoEntrada}
-                                placeholder="Ingrese su contraseña"
+                                placeholder="Ingrese su Contraseña"
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry={!showPassword}
@@ -191,7 +191,7 @@ export default function SignUp({ navigation }) {
                             <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                             <TextInput
                                 style={styles.campoEntrada}
-                                placeholder="Confirme su contraseña"
+                                placeholder="Confirme su Contraseña"
                                 value={confirmPassword}
                                 onChangeText={setConfirmPassword}
                                 secureTextEntry={!showConfirmPassword}
