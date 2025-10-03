@@ -56,8 +56,7 @@ export default function Login({ navigation }) {
         start={{ x: 0.5, y: 0 }} 
         end={{ x: 0.5, y: 1 }} 
         style={styles.contenedorFondo}
-    >   
-        {/*  */}
+    >  
         <KeyboardAvoidingView
             style={styles.contenedorFondo}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -99,13 +98,13 @@ export default function Login({ navigation }) {
                         <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Contraseña"
+                            placeholder={"Contraseña"}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />  
+                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" /> 
                         </TouchableOpacity>
                     </View>
                     

@@ -3,7 +3,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { auth } from '../src/config/firebaseConfig'; 
-// Puedes importar un componente para mostrar una pantalla de carga básica
 import { View, ActivityIndicator, StyleSheet } from 'react-native'; 
 
 import Login from '../screens/Login';
@@ -48,7 +47,7 @@ function Navigation() {
       <Stack.Navigator 
         initialRouteName={isAuthenticated ? "Home" : "Login"}
         screenOptions={{ 
-          headerShown: false // Oculta la barra de navegación para TODAS las pantallas
+          headerShown: false 
         }}
       >
         <Stack.Screen name="Login" component={Login} />
