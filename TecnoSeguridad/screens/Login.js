@@ -4,34 +4,132 @@ import {
     Text, 
     TextInput, 
     TouchableOpacity, 
-    Alert, 
     Image, 
     StyleSheet, 
-    ScrollView, // Componente para que la pantalla sea desplazable
+    ScrollView, 
+    KeyboardAvoidingView, 
+    Platform, 
+    Modal, // Componente para crear el alert personalizado
 } from 'react-native'; 
-import { FontAwesome } from '@expo/vector-icons';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../src/config/firebaseConfig';
-import { LinearGradient } from 'expo-linear-gradient'; 
+import { FontAwesome } from '@expo/vector-icons'; // Iconos
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Función de autenticación de Firebase
+import { auth } from '../src/config/firebaseConfig'; // Instancia de autenticación de Firebase
+import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
+
+// -------------------------------------------------------------------
+// Componente de Alerta Personalizada (CustomAlert)
+// Muestra un modal con fondo blanco y texto/botones azules.
+// -------------------------------------------------------------------
+const CustomAlert = ({ isVisible, title, message, onClose }) => {
+    return (
+        <Modal
+            animationType="fade"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <View style={customAlertStyles.modalContainer}>
+                <View style={customAlertStyles.alertBox}>
+                    <Text style={customAlertStyles.alertTitle}>{title}</Text>
+                    <Text style={customAlertStyles.alertMessage}>{message}</Text>
+                    
+                    <TouchableOpacity 
+                        style={customAlertStyles.alertButton} 
+                        onPress={onClose}
+                    >
+                        <Text style={customAlertStyles.alertButtonText}>OK</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+// Estilos específicos para el Custom Alert (Fondo blanco, textos azules)
+const customAlertStyles = StyleSheet.create({
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Overlay oscuro
+    },
+    alertBox: {
+        width: 300,
+        backgroundColor: 'white', // Fondo Blanco
+        borderRadius: 15,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    alertTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#007AFF', // Letras Azules
+        marginBottom: 10,
+    },
+    alertMessage: {
+        fontSize: 15,
+        color: '#007AFF', // Letras Azules
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    alertButton: {
+        backgroundColor: '#007AFF', // Fondo Azul
+        borderRadius: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        width: '100%',
+        alignItems: 'center',
+    },
+    alertButtonText: {
+        color: 'white', // Letras Blancas
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+});
+
+// -------------------------------------------------------------------
+// Componente Principal de Login
+// -------------------------------------------------------------------
 
 export default function Login({ navigation }) {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState(''); // Estado para el correo electrónico
+    const [password, setPassword] = useState(''); // Estado para la contraseña
+    const [showPassword, setShowPassword] = useState(false); // Alternar visibilidad de contraseña
+    
+    // Estados para el Custom Alert
+    const [isAlertVisible, setIsAlertVisible] = useState(false); // Controlar visibilidad del modal
+    const [alertData, setAlertData] = useState({ title: '', message: '' }); // Contenido del modal
 
+    // Muestra el Custom Alert
+    const showAlert = (title, message) => {
+        setAlertData({ title, message });
+        setIsAlertVisible(true);
+    };
+
+    // Oculta el Custom Alert
+    const hideAlert = () => {
+        setIsAlertVisible(false);
+    };
+
+    // Maneja la lógica de inicio de sesión con Firebase
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert("Error", "Por favor ingrese ambos campos.");
+            showAlert("Error", "Por favor ingresa ambos campos."); // Usando Custom Alert
             return;
         }
 
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            Alert.alert("Login exitoso", "Has iniciado sesión correctamente.");
-            // Navega a Home y resetea el stack (quita la pantalla de Login del historial)
+            showAlert("Login exitoso", "Has iniciado sesión correctamente."); // Usando Custom Alert
+            // Navegación a Home y reseteo del stack
             navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
         } catch (error) {
-            let errorMessage = "Hubo Algun un problema al iniciar sesión.";
+            let errorMessage = "Hubo un problema al iniciar sesión.";
             switch (error.code) {
                 case 'auth/invalid-email':
                     errorMessage = "El formato del correo electrónico no es válido.";
@@ -44,22 +142,39 @@ export default function Login({ navigation }) {
                     errorMessage = "Error de conexión, por favor intenta más tarde.";
                     break;
             }
-            Alert.alert("Error", errorMessage);
+            // Muestra el mensaje de error con el Custom Alert (Blanco y Azul)
+            showAlert("Error", errorMessage);
         }
     };
 
     return (
-        <LinearGradient
-            colors={['#97c1e6', '#e4eff9']} 
-            start={{ x: 0.5, y: 0 }} 
-            end={{ x: 0.5, y: 1 }} 
+    <LinearGradient
+        colors={['#97c1e6', '#e4eff9']} // Colores de gradiente de fondo
+        start={{ x: 0.5, y: 0 }} 
+        end={{ x: 0.5, y: 1 }} 
+        style={styles.contenedorFondo}
+    >  
+        {/* Renderiza el Custom Alert */}
+        <CustomAlert 
+            isVisible={isAlertVisible} 
+            title={alertData.title} 
+            message={alertData.message} 
+            onClose={hideAlert} 
+        />
+        
+        <KeyboardAvoidingView
             style={styles.contenedorFondo}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Ajuste de teclado
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
+            enabled
         >
-            {/* 1. Cambio CLAVE: Usar contentContainerStyle con flexGrow: 1 */}
-            <ScrollView contentContainerStyle={styles.scrollContenido}>
-                
+            <ScrollView 
+                contentContainerStyle={styles.scrollContenido}
+                keyboardShouldPersistTaps="handled" // Permite clicks sin cerrar el teclado
+            >
                 <View style={styles.contenedorBlanco}>
                     
+                    {/* Sección del logo */}
                     <View style={styles.contenedorLogo}>
                         <View style={styles.bordeLogo}>
                             <Image source={require('../assets/logo.png')} style={styles.logo} /> 
@@ -69,6 +184,7 @@ export default function Login({ navigation }) {
 
                     <Text style={styles.titulo}>Iniciar Sesión</Text>
 
+                    {/* Campo de Correo Electrónico */}
                     <Text style={styles.etiqueta}>Correo Electrónico</Text>
                     <View style={styles.campoContenedor}>
                         <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
@@ -82,18 +198,19 @@ export default function Login({ navigation }) {
                         />
                     </View>
 
+                    {/* Campo de Contraseña */}
                     <Text style={styles.etiqueta}>Contraseña</Text>
                     <View style={styles.campoContenedor}>
                         <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Contraseña"
+                            placeholder={"Contraseña"}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" /> 
                         </TouchableOpacity>
                     </View>
                     
@@ -101,40 +218,41 @@ export default function Login({ navigation }) {
                         <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
                     </TouchableOpacity>
 
+                    {/* Botón Principal de Login */}
                     <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
                         <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
                     </TouchableOpacity>
 
+                    {/* Botón de Google */}
                     <TouchableOpacity style={styles.botonGoogle}>
                         <FontAwesome name="google" size={20} color="#db4437" style={styles.iconoGoogle} /> 
                         <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
                     </TouchableOpacity>
 
+                    {/* Enlace de Registro: "No tienes cuenta?" sin subrayado, utilizando el estilo corregido */}
                     <View style={styles.contenedorRegistro}>
                         <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                            <Text style={styles.textoRegistroLink}>Regístrate aquí</Text>
+                            <Text style={styles.textoRegistroLinkSinSubrayado}>Regístrate aquí</Text>
                         </TouchableOpacity>
                     </View>
+                    
                 </View>
             </ScrollView>
-        </LinearGradient>
-    );
+        </KeyboardAvoidingView>
+    </LinearGradient>
+);
 }
+
 
 const styles = StyleSheet.create({
     contenedorFondo: {
         flex: 1, 
     },
     scrollContenido: {
-        // 🚨 AJUSTE 1: Se recomienda 'flexGrow: 1' para que el contenido ocupe el espacio,
-        // pero se pueda desplazar si es necesario.
         flexGrow: 1, 
-        // 🚨 AJUSTE 2: Se puede usar 'justifyContent: 'center' para centrar la tarjeta,
-        // pero podría interferir con el scroll al abrir el teclado. 'minHeight' y 'justifyContent'
-        // son a menudo conflictivos si se busca una solución universal.
-        justifyContent: 'center', // Para centrar la tarjeta verticalmente en el medio
-        paddingVertical: 40, // Dejamos padding para espacio en los bordes superior/inferior
+        justifyContent: 'center', 
+        paddingVertical: 40, 
         paddingHorizontal: 30, 
         alignItems: 'center', 
         width: '100%',
@@ -142,9 +260,7 @@ const styles = StyleSheet.create({
     contenedorBlanco: {
         backgroundColor: '#fff',
         width: '100%', 
-        // 🚨 AJUSTE 3: Se ELIMINA 'flex: 1' o 'minHeight' aquí. 
-        // Esto permite que el contenedor se ajuste al tamaño de su contenido.
-        paddingVertical: 60, // Aumenta el padding interno para que la tarjeta se vea más grande
+        paddingVertical: 60, 
         paddingHorizontal: 25,
         borderRadius: 10, 
         alignItems: 'center',
@@ -155,7 +271,6 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 10,
     },
-    // ... (otros estilos sin cambios críticos)
     contenedorRegistro: {
         flexDirection: 'row',
         marginTop: 15, 
@@ -165,10 +280,9 @@ const styles = StyleSheet.create({
         color: '#555', 
         fontSize: 14,
     },
-    textoRegistroLink: {
+    textoRegistroLinkSinSubrayado: { 
         color: '#007AFF', 
         fontSize: 14,
-        textDecorationLine: 'underline',
         fontWeight: '600',
     },
     contenedorLogo: {
@@ -224,8 +338,6 @@ const styles = StyleSheet.create({
     },
     campoEntrada: {
         height: 40, 
-        // Reemplazar 'width: 85%' por 'flex: 1' si quieres que ocupe todo el espacio restante. 
-        // Lo dejamos como estaba en tu código original.
         width: '85%', 
         color: '#333',
     },
@@ -270,6 +382,6 @@ const styles = StyleSheet.create({
     textoBotonGoogle: {
         color: '#007AFF', 
         fontSize: 14, 
-        fontWeight: 'normal', 
-},
+        fontWeight: 'normal',
+    },
 });
