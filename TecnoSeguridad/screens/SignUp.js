@@ -105,9 +105,6 @@ export default function SignUp({ navigation }) {
             style={styles.contenedorFondo}
         >
             <KeyboardAvoidingView
-                // 🚨 CAMBIO CLAVE: Usamos 'padding' en ambas plataformas 🚨
-                // Esto permite que RN maneje el ajuste internamente, 
-                // ya que 'pan' está manejando el movimiento nativo.
                 behavior={"padding"} 
                 style={styles.keyboardAvoiding} 
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Opcional: Ajusta el offset vertical si aún se superpone un poco

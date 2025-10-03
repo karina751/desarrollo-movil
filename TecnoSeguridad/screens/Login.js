@@ -9,7 +9,7 @@ import {
     StyleSheet, 
     ScrollView, 
     KeyboardAvoidingView, 
-    Platform, 
+    Platform, 
 } from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -53,8 +53,8 @@ export default function Login({ navigation }) {
     return (
     <LinearGradient
         colors={['#97c1e6', '#e4eff9']} 
-        start={{ x: 0.5, y: 0 }}       
-        end={{ x: 0.5, y: 1 }}         
+        start={{ x: 0.5, y: 0 }} 
+        end={{ x: 0.5, y: 1 }} 
         style={styles.contenedorFondo}
     >   
         {/*  */}
@@ -144,9 +144,7 @@ const styles = StyleSheet.create({
         flexGrow: 1, 
         // justifyContent: 'center', 
         paddingVertical: 0, 
-        // 🚨 AJUSTE 2: Se puede usar 'justifyContent: 'center' para centrar la tarjeta,
-        // pero podría interferir con el scroll al abrir el teclado. 'minHeight' y 'justifyContent'
-        // son a menudo conflictivos si se busca una solución universal.
+        // use 'justifyContent: 'center' para centrar la tarjeta,
         justifyContent: 'center', // Para centrar la tarjeta verticalmente en el medio
         paddingVertical: 40, // Dejamos padding para espacio en los bordes superior/inferior
         paddingHorizontal: 30, 
@@ -167,7 +165,6 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 10,
     },
-    // ... (otros estilos sin cambios críticos)
     contenedorRegistro: {
         flexDirection: 'row',
         marginTop: 15, 
@@ -280,6 +277,6 @@ const styles = StyleSheet.create({
     textoBotonGoogle: {
         color: '#007AFF', 
         fontSize: 14, 
-        fontWeight: 'normal', 
+        fontWeight: 'normal',
 },
 });
