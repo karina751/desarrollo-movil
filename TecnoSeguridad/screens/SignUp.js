@@ -104,7 +104,7 @@ export default function SignUp({ navigation }) {
             style={styles.contenedorFondo}
         >
             <KeyboardAvoidingView
-                behavior={"padding"} 
+                behavior={"position"} 
                 style={styles.keyboardAvoiding} 
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20} // Opcional: Ajusta el offset vertical si aún se superpone un poco
             >
