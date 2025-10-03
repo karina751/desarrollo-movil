@@ -122,7 +122,7 @@ export default function Login({ navigation }) {
                     </TouchableOpacity>
 
                     <View style={styles.contenedorRegistro}>
-                        <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
+                        <Text style={styles.textoRegistroGris}>¿No tenes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                             <Text style={styles.textoRegistroLink}>Regístrate aquí</Text>
                         </TouchableOpacity>
@@ -176,7 +176,6 @@ const styles = StyleSheet.create({
     textoRegistroLink: {
         color: '#007AFF', 
         fontSize: 14,
-        textDecorationLine: 'underline',
         fontWeight: '600',
     },
     contenedorLogo: {
