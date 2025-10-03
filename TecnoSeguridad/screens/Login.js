@@ -8,6 +8,8 @@ import {
     Image, 
     StyleSheet, 
     ScrollView, 
+    KeyboardAvoidingView, 
+    Platform, 
 } from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -48,20 +50,29 @@ export default function Login({ navigation }) {
     };
 
     return (
-        <LinearGradient
-            colors={['#97c1e6', '#e4eff9']} 
-            start={{ x: 0.5, y: 0 }}       
-            end={{ x: 0.5, y: 1 }}         
+    <LinearGradient
+        colors={['#97c1e6', '#e4eff9']} 
+        start={{ x: 0.5, y: 0 }}       
+        end={{ x: 0.5, y: 1 }}         
+        style={styles.contenedorFondo}
+    >   
+        {/*  */}
+        <KeyboardAvoidingView
             style={styles.contenedorFondo}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
+            enabled
         >
-            {/* Estructura simple y robusta para scroll */}
-            <ScrollView contentContainerStyle={styles.scrollContenido}>
-                
+            <ScrollView 
+                contentContainerStyle={styles.scrollContenido}
+                keyboardShouldPersistTaps="handled"
+            >
                 <View style={styles.contenedorBlanco}>
+                    
+                    {/* contenido del Login (Logo, campos, botones) */}
                     
                     <View style={styles.contenedorLogo}>
                         <View style={styles.bordeLogo}>
-                            {/* Verifica la ruta de tu logo: '../assets/logo.png' */}
                             <Image source={require('../assets/logo.png')} style={styles.logo} /> 
                         </View>
                         <Text style={styles.nombreApp}>TecnoSeguridad</Text>
@@ -93,7 +104,7 @@ export default function Login({ navigation }) {
                             secureTextEntry={!showPassword}
                         />
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />  
+                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />  
                         </TouchableOpacity>
                     </View>
                     
@@ -116,10 +127,12 @@ export default function Login({ navigation }) {
                             <Text style={styles.textoRegistroLink}>Regístrate aquí</Text>
                         </TouchableOpacity>
                     </View>
+                    
                 </View>
             </ScrollView>
-        </LinearGradient>
-    );
+        </KeyboardAvoidingView>
+    </LinearGradient>
+);
 }
 
 const styles = StyleSheet.create({
