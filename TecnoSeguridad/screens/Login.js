@@ -9,17 +9,13 @@ import {
     ScrollView, 
     KeyboardAvoidingView, 
     Platform, 
-    Modal, // Componente para crear el alert personalizado
+    Modal, 
 } from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons'; // Iconos
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Función de autenticación de Firebase
 import { auth } from '../src/config/firebaseConfig'; // Instancia de autenticación de Firebase
 import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
 
-// -------------------------------------------------------------------
-// Componente de Alerta Personalizada (CustomAlert)
-// Muestra un modal con fondo blanco y texto/botones azules.
-// -------------------------------------------------------------------
 const CustomAlert = ({ isVisible, title, message, onClose }) => {
     return (
         <Modal
@@ -45,7 +41,7 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
     );
 };
 
-// Estilos específicos para el Custom Alert (Fondo blanco, textos azules)
+// Estilos para el custom alert
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -92,9 +88,7 @@ const customAlertStyles = StyleSheet.create({
     },
 });
 
-// -------------------------------------------------------------------
-// Componente Principal de Login
-// -------------------------------------------------------------------
+
 
 export default function Login({ navigation }) {
     const [email, setEmail] = useState(''); // Estado para el correo electrónico
@@ -142,7 +136,7 @@ export default function Login({ navigation }) {
                     errorMessage = "Error de conexión, por favor intenta más tarde.";
                     break;
             }
-            // Muestra el mensaje de error con el Custom Alert (Blanco y Azul)
+            // Muestra el mensaje de error con el Custom Alert 
             showAlert("Error", errorMessage);
         }
     };
@@ -229,7 +223,6 @@ export default function Login({ navigation }) {
                         <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
                     </TouchableOpacity>
 
-                    {/* Enlace de Registro: "No tienes cuenta?" sin subrayado, utilizando el estilo corregido */}
                     <View style={styles.contenedorRegistro}>
                         <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
