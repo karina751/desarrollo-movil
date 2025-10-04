@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     View, 
     Text, 
@@ -9,7 +9,7 @@ import {
     ScrollView,
     Platform, 
     KeyboardAvoidingView,
-    Modal, // 👈 Importamos Modal
+    Modal, 
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../src/config/firebaseConfig'; 
@@ -17,8 +17,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore'; 
 import { LinearGradient } from 'expo-linear-gradient'; 
 
-// creo el customalert para controlarlas
-
+// creamos este para controlar las alertas
 const CustomAlert = ({ isVisible, title, message, onClose }) => {
     return (
         <Modal
@@ -44,17 +43,49 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
     );
 };
 
-// xreo esto para modificar el alerta
+
+// REQUISITOS DE CONTRASEÑA (NUEVO)
+
+const PasswordRequirements = ({ hasUppercase, hasNumber, hasMinLength }) => {
+    const getColor = (isMet) => isMet ? '#4CAF50' : '#007AFF'; // Verde si cumple, Azul/Celeste si no
+
+    return (
+        <View style={styles.requirementsContainer}>
+            <Text style={{ 
+                color: getColor(hasMinLength), 
+                fontSize: 12, 
+                marginBottom: 2 
+            }}>
+                <FontAwesome name={hasMinLength ? "check-circle" : "circle-o"} size={12} /> Mínimo 8 caracteres
+            </Text>
+            <Text style={{ 
+                color: getColor(hasUppercase), 
+                fontSize: 12, 
+                marginBottom: 2 
+            }}>
+                <FontAwesome name={hasUppercase ? "check-circle" : "circle-o"} size={12} /> Una letra mayúscula y una minúscula
+            </Text>
+            <Text style={{ 
+                color: getColor(hasNumber), 
+                fontSize: 12 
+            }}>
+                <FontAwesome name={hasNumber ? "check-circle" : "circle-o"} size={12} /> Al menos un número
+            </Text>
+        </View>
+    );
+};
+
+
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Overlay oscuro
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', 
     },
     alertBox: {
         width: 300,
-        backgroundColor: 'white', // Fondo Blanco
+        backgroundColor: 'white', 
         borderRadius: 15,
         padding: 20,
         alignItems: 'center',
@@ -67,17 +98,17 @@ const customAlertStyles = StyleSheet.create({
     alertTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#007AFF', // Letras Azules
+        color: '#007AFF', 
         marginBottom: 10,
     },
     alertMessage: {
         fontSize: 15,
-        color: '#007AFF', // Letras Azules
+        color: '#007AFF', 
         textAlign: 'center',
         marginBottom: 20,
     },
     alertButton: {
-        backgroundColor: '#007AFF', // Fondo Azul
+        backgroundColor: '#007AFF', 
         borderRadius: 10,
         paddingVertical: 10,
         paddingHorizontal: 20,
@@ -85,7 +116,7 @@ const customAlertStyles = StyleSheet.create({
         alignItems: 'center',
     },
     alertButtonText: {
-        color: 'white', // Letras Blancas
+        color: 'white', 
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -108,6 +139,11 @@ export default function SignUp({ navigation }) {
     const [passwordError, setPasswordError] = useState('');
     const [confirmError, setConfirmError] = useState('');
 
+    // VALIDACIÓN EN TIEMPO REAL
+    const [hasUppercase, setHasUppercase] = useState(false);
+    const [hasNumber, setHasNumber] = useState(false);
+    const [hasMinLength, setHasMinLength] = useState(false);
+
     // Estados y funciones para el Custom Alert (Modal)
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '' });
@@ -120,6 +156,24 @@ export default function SignUp({ navigation }) {
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
+    
+    // VALIDACIÓN EN TIEMPO REAL
+    const validatePassword = (text) => {
+        setPassword(text);
+
+        // Mínimo 8 caracteres
+        setHasMinLength(text.length >= 8);
+        
+        // Mayúscula y Minúscula
+        setHasUppercase(/[a-z]/.test(text) && /[A-Z]/.test(text));
+
+        // Número
+        setHasNumber(/\d/.test(text));
+
+        // Limpiar el error de confirmación al cambiar la contraseña
+        setConfirmError('');
+    };
+
 
     const handleSignUp = async () => {
         // 1. Validación: Campos Obligatorios
@@ -138,16 +192,19 @@ export default function SignUp({ navigation }) {
             setConfirmError(''); 
         }
 
-        // 3. Validación: Complejidad de Contraseña
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            setPasswordError("La contraseña debe tener al menos 8 caracteres, incluyendo una mayúscula, una minúscula y un número.");
+        // Vlidando largo,mayus y nro
+        const isPasswordValid = hasMinLength && hasUppercase && hasNumber;
+
+        if (!isPasswordValid) {
+            // No establecemos un solo mensaje de error, ya que el usuario ya tiene feedback visual
+            setPasswordError("La contraseña no cumple con todos los requisitos de seguridad.");
             setConfirmError(''); 
-            showAlert("Error", "La contraseña no cumple con los requisitos de seguridad."); // 👈 Usando Custom Alert
+            showAlert("Error", "La contraseña no cumple con todos los requisitos de seguridad."); 
             return;
         } else {
             setPasswordError(''); 
         }
+
 
         try {
             // Registrar usuario en Firebase Auth
@@ -163,8 +220,8 @@ export default function SignUp({ navigation }) {
             });
             
             // ÉXITO
-            showAlert("Registro exitoso", "Cuenta creada y datos guardados. Serás redirigido a Login."); // 👈 Usando Custom Alert
-            // Dar un pequeño delay para que el usuario lea el mensaje de éxito antes de navegar
+            showAlert("Registro exitoso", "Cuenta creada y datos guardados. Serás redirigido a Login."); 
+            
             setTimeout(() => {
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); 
             }, 2000); 
@@ -183,7 +240,7 @@ export default function SignUp({ navigation }) {
                     errorMessage = "Error de conexión, por favor intenta más tarde.";
                     break;
             }
-            // ERROR (Todos los errores usan ahora el Custom Alert)
+            //  (Todos los errores usan ahora el Custom Alert)
             showAlert("Error", errorMessage);
         }
     };
@@ -195,7 +252,7 @@ export default function SignUp({ navigation }) {
             end={{ x: 0.5, y: 1 }} 
             style={styles.contenedorFondo}
         >
-            {/* 👈 Renderiza el Custom Alert (Modal) */}
+            {/* Renderiza el Custom Alert (Modal) */}
             <CustomAlert 
                 isVisible={isAlertVisible} 
                 title={alertData.title} 
@@ -224,8 +281,6 @@ export default function SignUp({ navigation }) {
                         </View>
 
                         <Text style={styles.titulo}>Crear una Cuenta</Text>
-
-                        {/* Campo Nombre */}
                         <Text style={styles.etiqueta}>Nombre</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
@@ -238,7 +293,6 @@ export default function SignUp({ navigation }) {
                             />
                         </View>
 
-                        {/* Campo Apellido */}
                         <Text style={styles.etiqueta}>Apellido</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
@@ -251,7 +305,6 @@ export default function SignUp({ navigation }) {
                             />
                         </View>
 
-                        {/* Campo Correo Electrónico */}
                         <Text style={styles.etiqueta}>Correo Electrónico</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
@@ -265,7 +318,7 @@ export default function SignUp({ navigation }) {
                             />
                         </View>
 
-                        {/* Campo Contraseña */}
+                        {/* Contraseña (MODIFICADO) */}
                         <Text style={styles.etiqueta}>Contraseña</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
@@ -273,13 +326,20 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Contraseña"
                                 value={password}
-                                onChangeText={setPassword}
+                                onChangeText={validatePassword} // 👈 Usamos la nueva función
                                 secureTextEntry={!showPassword}
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
+                        {/* requisitos activos */}
+                        <PasswordRequirements 
+                            hasUppercase={hasUppercase}
+                            hasNumber={hasNumber}
+                            hasMinLength={hasMinLength}
+                        />
+                        {/* Mostramos error por defecto */}
                         {passwordError ? <Text style={styles.textoError}>{passwordError}</Text> : null}
 
                         {/* Campo Confirmar Contraseña */}
@@ -345,6 +405,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 10,
         elevation: 10,
+    },
+    // estilo para los campos nuevos de contraseña
+    requirementsContainer: {
+        width: '100%',
+        paddingLeft: 5,
+        marginBottom: 10, 
     },
     contenedorRegistro: {
         flexDirection: 'row',
