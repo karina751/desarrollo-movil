@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
     View, 
     Text, 
@@ -44,10 +44,9 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
 };
 
 
-// REQUISITOS DE CONTRASEÑA (NUEVO)
-
+// REQUISITOS DE CONTRASEÑA
 const PasswordRequirements = ({ hasUppercase, hasNumber, hasMinLength }) => {
-    const getColor = (isMet) => isMet ? '#4CAF50' : '#007AFF'; // Verde si cumple, Azul/Celeste si no
+    const getColor = (isMet) => isMet ? '#4CAF50' : '#007AFF'; 
 
     return (
         <View style={styles.requirementsContainer}>
@@ -138,8 +137,11 @@ export default function SignUp({ navigation }) {
     // Estados para mensajes de error de validación en la interfaz
     const [passwordError, setPasswordError] = useState('');
     const [confirmError, setConfirmError] = useState('');
+    
+    // 👉 ESTADO PARA EL ERROR DE COINCIDENCIA EN TIEMPO REAL
+    const [confirmMatchError, setConfirmMatchError] = useState(''); 
 
-    // VALIDACIÓN EN TIEMPO REAL
+    // VALIDACIÓN EN TIEMPO REAL de complejidad
     const [hasUppercase, setHasUppercase] = useState(false);
     const [hasNumber, setHasNumber] = useState(false);
     const [hasMinLength, setHasMinLength] = useState(false);
@@ -157,21 +159,31 @@ export default function SignUp({ navigation }) {
         setIsAlertVisible(false);
     };
     
-    // VALIDACIÓN EN TIEMPO REAL
+    // FUNCIÓN DE VALIDACIÓN DE COMPLEJIDAD EN TIEMPO REAL
     const validatePassword = (text) => {
         setPassword(text);
 
-        // Mínimo 8 caracteres
+        // Actualizar complejidad
         setHasMinLength(text.length >= 8);
-        
-        // Mayúscula y Minúscula
         setHasUppercase(/[a-z]/.test(text) && /[A-Z]/.test(text));
-
-        // Número
         setHasNumber(/\d/.test(text));
 
-        // Limpiar el error de confirmación al cambiar la contraseña
-        setConfirmError('');
+        // Actualizar coincidencia
+        if (confirmPassword && text !== confirmPassword) {
+            setConfirmMatchError("Las contraseñas no coinciden.");
+        } else {
+            setConfirmMatchError('');
+        }
+    };
+    
+    // 👉 FUNCIÓN PARA VALIDAR COINCIDENCIA EN TIEMPO REAL
+    const validateConfirmPassword = (text) => {
+        setConfirmPassword(text);
+        if (password && text !== password) {
+            setConfirmMatchError("Las contraseñas no coinciden.");
+        } else {
+            setConfirmMatchError('');
+        }
     };
 
 
@@ -182,23 +194,20 @@ export default function SignUp({ navigation }) {
             return;
         }
 
-        // 2. Validación: Contraseñas Coincidentes
+        // 2. Validación: Contraseñas Coincidentes (Revisión final)
         if (password !== confirmPassword) {
-            setConfirmError("Las contraseñas no coinciden.");
-            setPasswordError('');
+            setConfirmMatchError("Las contraseñas no coinciden."); // Refresca el error local si lo borraron
             showAlert("Error", "Las contraseñas no coinciden."); 
             return;
         } else {
-            setConfirmError(''); 
+            setConfirmMatchError(''); 
         }
 
-        // Vlidando largo,mayus y nro
+        // 3. Validación: Complejidad de Contraseña (Revisión final)
         const isPasswordValid = hasMinLength && hasUppercase && hasNumber;
 
         if (!isPasswordValid) {
-            // No establecemos un solo mensaje de error, ya que el usuario ya tiene feedback visual
             setPasswordError("La contraseña no cumple con todos los requisitos de seguridad.");
-            setConfirmError(''); 
             showAlert("Error", "La contraseña no cumple con todos los requisitos de seguridad."); 
             return;
         } else {
@@ -240,7 +249,6 @@ export default function SignUp({ navigation }) {
                     errorMessage = "Error de conexión, por favor intenta más tarde.";
                     break;
             }
-            //  (Todos los errores usan ahora el Custom Alert)
             showAlert("Error", errorMessage);
         }
     };
@@ -252,7 +260,6 @@ export default function SignUp({ navigation }) {
             end={{ x: 0.5, y: 1 }} 
             style={styles.contenedorFondo}
         >
-            {/* Renderiza el Custom Alert (Modal) */}
             <CustomAlert 
                 isVisible={isAlertVisible} 
                 title={alertData.title} 
@@ -281,6 +288,8 @@ export default function SignUp({ navigation }) {
                         </View>
 
                         <Text style={styles.titulo}>Crear una Cuenta</Text>
+
+                        {/* Campo Nombre */}
                         <Text style={styles.etiqueta}>Nombre</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
@@ -293,6 +302,7 @@ export default function SignUp({ navigation }) {
                             />
                         </View>
 
+                        {/* Campo Apellido */}
                         <Text style={styles.etiqueta}>Apellido</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="user" size={20} color="#007AFF" style={styles.icono} />
@@ -305,6 +315,7 @@ export default function SignUp({ navigation }) {
                             />
                         </View>
 
+                        {/* Campo Correo Electrónico */}
                         <Text style={styles.etiqueta}>Correo Electrónico</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
@@ -318,7 +329,7 @@ export default function SignUp({ navigation }) {
                             />
                         </View>
 
-                        {/* Contraseña (MODIFICADO) */}
+                        {/* Contraseña */}
                         <Text style={styles.etiqueta}>Contraseña</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
@@ -326,23 +337,24 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Contraseña"
                                 value={password}
-                                onChangeText={validatePassword} // 👈 Usamos la nueva función
+                                onChangeText={validatePassword} 
                                 secureTextEntry={!showPassword}
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
+                        
                         {/* requisitos activos */}
                         <PasswordRequirements 
                             hasUppercase={hasUppercase}
                             hasNumber={hasNumber}
                             hasMinLength={hasMinLength}
                         />
-                        {/* Mostramos error por defecto */}
+                        {/* Mostramos error por defecto de la contraseña (si existe) */}
                         {passwordError ? <Text style={styles.textoError}>{passwordError}</Text> : null}
 
-                        {/* Campo Confirmar Contraseña */}
+                        {/* Campo Confirmar Contraseña (MODIFICADO) */}
                         <Text style={styles.etiqueta}>Confirmar Contraseña</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
@@ -350,13 +362,16 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Confirme su Contraseña"
                                 value={confirmPassword}
-                                onChangeText={setConfirmPassword}
+                                onChangeText={validateConfirmPassword} // 👈 Usamos la nueva función
                                 secureTextEntry={!showConfirmPassword}
                             />
                             <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                                 <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
+                        {/* 👉 MOSTRAMOS EL ERROR DE COINCIDENCIA EN TIEMPO REAL */}
+                        {confirmMatchError ? <Text style={styles.textoError}>{confirmMatchError}</Text> : null}
+                        {/* Mostramos el error de confirmación general (si existe) */}
                         {confirmError ? <Text style={styles.textoError}>{confirmError}</Text> : null}
 
                         <TouchableOpacity style={styles.botonPrincipal} onPress={handleSignUp}>
@@ -406,7 +421,6 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 10,
     },
-    // estilo para los campos nuevos de contraseña
     requirementsContainer: {
         width: '100%',
         paddingLeft: 5,
@@ -425,6 +439,7 @@ const styles = StyleSheet.create({
         color: '#007AFF', 
         fontSize: 14,
         fontWeight: '600',
+        textDecorationLine: 'underline',
     },
     contenedorLogo: {
         alignItems: 'center',
