@@ -13,11 +13,12 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../src/config/firebaseConfig'; 
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth'; 
 import { doc, setDoc } from 'firebase/firestore'; 
 import { LinearGradient } from 'expo-linear-gradient'; 
 
-// creamos este para controlar las alertas
+// Componente de Alerta Modal (CustomAlert)
+// Usado solo para mensajes de ÉXITO o ERRORES CRÍTICOS/DE FIREBASE.
 const CustomAlert = ({ isVisible, title, message, onClose }) => {
     return (
         <Modal
@@ -44,8 +45,9 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
 };
 
 
-// REQUISITOS DE CONTRASEÑA
-const PasswordRequirements = ({ hasUppercase, hasNumber, hasMinLength }) => {
+// Componente de Requisitos de Contraseña
+const PasswordRequirements = ({ hasUppercase, hasLowercase, hasNumber, hasMinLength }) => {
+    // Determina el color: Verde si se cumple, Azul si no.
     const getColor = (isMet) => isMet ? '#4CAF50' : '#007AFF'; 
 
     return (
@@ -58,11 +60,18 @@ const PasswordRequirements = ({ hasUppercase, hasNumber, hasMinLength }) => {
                 <FontAwesome name={hasMinLength ? "check-circle" : "circle-o"} size={12} /> Mínimo 8 caracteres
             </Text>
             <Text style={{ 
+                color: getColor(hasLowercase), 
+                fontSize: 12, 
+                marginBottom: 2 
+            }}>
+                <FontAwesome name={hasLowercase ? "check-circle" : "circle-o"} size={12} /> Al menos una letra minúscula
+            </Text>
+            <Text style={{ 
                 color: getColor(hasUppercase), 
                 fontSize: 12, 
                 marginBottom: 2 
             }}>
-                <FontAwesome name={hasUppercase ? "check-circle" : "circle-o"} size={12} /> Una letra mayúscula y una minúscula
+                <FontAwesome name={hasUppercase ? "check-circle" : "circle-o"} size={12} /> Al menos una letra mayúscula
             </Text>
             <Text style={{ 
                 color: getColor(hasNumber), 
@@ -75,6 +84,7 @@ const PasswordRequirements = ({ hasUppercase, hasNumber, hasMinLength }) => {
 };
 
 
+// Estilos para el Custom Alert
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -122,6 +132,27 @@ const customAlertStyles = StyleSheet.create({
 });
 
 
+/**
+ * VALIDA FORMATO Y REPETICIÓN de nombres/apellidos.
+ * (Se usa con el texto ya .trimmed())
+ */
+const isValidName = (text) => {
+    // 1. Regex para el formato de caracteres (letras, ñ, acentos, espacios, guiones).
+    const nameRegex = /^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ'-]+$/;
+    if (!nameRegex.test(text)) {
+        return false; // Falla si tiene números o símbolos
+    }
+
+    // 2. Comprobación de Caracteres Repetidos (5 o más veces consecutivas).
+    const repetitionRegex = /(.)\1{4,}/; 
+    if (repetitionRegex.test(text)) {
+        return false; // Falla si el patrón se repite
+    }
+
+    return true;
+};
+
+
 export default function SignUp({ navigation }) {
     // Estados para los campos de entrada
     const [firstName, setFirstName] = useState('');
@@ -130,19 +161,19 @@ export default function SignUp({ navigation }) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     
+    // Estados de Error Específicos (Mostrados debajo del campo)
+    const [firstNameError, setFirstNameError] = useState(''); 
+    const [lastNameError, setLastNameError] = useState(''); 
+    const [passwordError, setPasswordError] = useState(''); 
+    const [confirmMatchError, setConfirmMatchError] = useState(''); 
+    
     // Estados para mostrar/ocultar contraseña
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     
-    // Estados para mensajes de error de validación en la interfaz
-    const [passwordError, setPasswordError] = useState('');
-    const [confirmError, setConfirmError] = useState('');
-    
-    // 👉 ESTADO PARA EL ERROR DE COINCIDENCIA EN TIEMPO REAL
-    const [confirmMatchError, setConfirmMatchError] = useState(''); 
-
-    // VALIDACIÓN EN TIEMPO REAL de complejidad
-    const [hasUppercase, setHasUppercase] = useState(false);
+    // Estados para la VALIDACIÓN DE COMPLEJIDAD de contraseña
+    const [hasLowercase, setHasLowercase] = useState(false); 
+    const [hasUppercase, setHasUppercase] = useState(false); 
     const [hasNumber, setHasNumber] = useState(false);
     const [hasMinLength, setHasMinLength] = useState(false);
 
@@ -159,16 +190,79 @@ export default function SignUp({ navigation }) {
         setIsAlertVisible(false);
     };
     
-    // FUNCIÓN DE VALIDACIÓN DE COMPLEJIDAD EN TIEMPO REAL
+    
+    /**
+     * VALIDA NOMBRE EN TIEMPO REAL (Longitud, Solo Espacios, Formato, Repetición).
+     */
+    const validateFirstName = (text) => {
+        setFirstName(text);
+        
+        const trimmedText = text.trim(); // Contenido útil sin espacios iniciales/finales
+
+        // Caso 1: Si el campo está completamente vacío (o solo tiene espacios)
+        if (trimmedText.length === 0) {
+            // Muestra el error si el usuario ha escrito solo espacios (text.length > 0)
+            if (text.length > 0) {
+                setFirstNameError("El nombre no puede ser solo espacios en blanco.");
+            } else {
+                setFirstNameError(''); // No hay error si no hay nada escrito
+            }
+            return;
+        }
+
+        // Caso 2: Longitud útil (Mínimo 2 letras)
+        if (trimmedText.length < 2) {
+            setFirstNameError("El nombre es demasiado corto (mínimo 2 letras útiles).");
+        } 
+        // Caso 3: Formato y Repetición (Usa isValidName en el texto recortado)
+        else if (!isValidName(trimmedText)) {
+            setFirstNameError("Solo se permiten letras, espacios o acentos, sin repeticiones excesivas.");
+        } else {
+            setFirstNameError(''); // Éxito
+        }
+    };
+    
+    /**
+     * VALIDA APELLIDO EN TIEMPO REAL (Longitud, Solo Espacios, Formato, Repetición).
+     */
+    const validateLastName = (text) => {
+        setLastName(text);
+        
+        const trimmedText = text.trim(); // Contenido útil sin espacios iniciales/finales
+
+        // Caso 1: Si el campo está completamente vacío (o solo tiene espacios)
+        if (trimmedText.length === 0) {
+            // Muestra el error si el usuario ha escrito solo espacios (text.length > 0)
+            if (text.length > 0) {
+                setLastNameError("El apellido no puede ser solo espacios en blanco.");
+            } else {
+                setLastNameError(''); // No hay error si no hay nada escrito
+            }
+            return;
+        }
+
+        // Caso 2: Longitud útil (Mínimo 2 letras)
+        if (trimmedText.length < 2) {
+            setLastNameError("El apellido es demasiado corto (mínimo 2 letras útiles).");
+        } 
+        // Caso 3: Formato y Repetición (Usa isValidName en el texto recortado)
+        else if (!isValidName(trimmedText)) {
+            setLastNameError("Solo se permiten letras, espacios o acentos, sin repeticiones excesivas.");
+        } else {
+            setLastNameError(''); // Éxito
+        }
+    };
+    
+    // FUNCIÓN DE VALIDACIÓN DE COMPLEJIDAD DE CONTRASEÑA EN TIEMPO REAL
     const validatePassword = (text) => {
         setPassword(text);
+        setPasswordError(''); 
 
-        // Actualizar complejidad
-        setHasMinLength(text.length >= 8);
-        setHasUppercase(/[a-z]/.test(text) && /[A-Z]/.test(text));
-        setHasNumber(/\d/.test(text));
+        setHasMinLength(text.length >= 8); 
+        setHasLowercase(/[a-z]/.test(text)); 
+        setHasUppercase(/[A-Z]/.test(text)); 
+        setHasNumber(/\d/.test(text)); 
 
-        // Actualizar coincidencia
         if (confirmPassword && text !== confirmPassword) {
             setConfirmMatchError("Las contraseñas no coinciden.");
         } else {
@@ -176,9 +270,11 @@ export default function SignUp({ navigation }) {
         }
     };
     
-    // 👉 FUNCIÓN PARA VALIDAR COINCIDENCIA EN TIEMPO REAL
+    // FUNCIÓN PARA VALIDAR COINCIDENCIA DE CONFIRMACIÓN EN TIEMPO REAL
     const validateConfirmPassword = (text) => {
         setConfirmPassword(text);
+        setConfirmMatchError('');
+        
         if (password && text !== password) {
             setConfirmMatchError("Las contraseñas no coinciden.");
         } else {
@@ -188,68 +284,78 @@ export default function SignUp({ navigation }) {
 
 
     const handleSignUp = async () => {
-        // 1. Validación: Campos Obligatorios
-        if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        // --- 1. VALIDACIONES FINALES ---
+        
+        // 1.1. Validación: Campos Obligatorios (Verifica que no sean SOLO espacios usando .trim())
+        if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
             showAlert("Error", "Todos los campos son obligatorios."); 
             return;
         }
+        
+        // 1.2. Validación: Errores Visuales Pendientes (Si hay un error ya visible en rojo)
+        const hasVisibleError = firstNameError || lastNameError || passwordError || confirmMatchError;
 
-        // 2. Validación: Contraseñas Coincidentes (Revisión final)
-        if (password !== confirmPassword) {
-            setConfirmMatchError("Las contraseñas no coinciden."); // Refresca el error local si lo borraron
-            showAlert("Error", "Las contraseñas no coinciden."); 
-            return;
-        } else {
-            setConfirmMatchError(''); 
+        if (hasVisibleError) {
+             showAlert("Error de Validación", "Por favor, corrige los errores marcados en los campos.");
+             return;
         }
-
-        // 3. Validación: Complejidad de Contraseña (Revisión final)
-        const isPasswordValid = hasMinLength && hasUppercase && hasNumber;
-
+        
+        // 1.3. Validación: Complejidad de Contraseña (Revisión final)
+        const isPasswordValid = hasMinLength && hasLowercase && hasUppercase && hasNumber;
         if (!isPasswordValid) {
-            setPasswordError("La contraseña no cumple con todos los requisitos de seguridad.");
-            showAlert("Error", "La contraseña no cumple con todos los requisitos de seguridad."); 
+            setPasswordError("La contraseña no cumple con todos los requisitos.");
+            showAlert("Error", "La contraseña no cumple con todos los requisitos."); 
             return;
-        } else {
-            setPasswordError(''); 
-        }
+        } 
 
+
+        // --- 2. REGISTRO EN FIREBASE Y FIRESTORE ---
 
         try {
-            // Registrar usuario en Firebase Auth
+            // A. Registrar usuario en Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-
-            // Guardar datos adicionales en Firestore
-            await setDoc(doc(db, "users", user.uid), {
-                firstName: firstName,
-                lastName: lastName,
-                email: email,
-                createdAt: new Date()
-            });
             
-            // ÉXITO
-            showAlert("Registro exitoso", "Cuenta creada y datos guardados. Serás redirigido a Login."); 
+            // ÉXITO DE AUTENTICACIÓN
+            showAlert("Registro exitoso", "Cuenta creada. Serás redirigido a Iniciar Sesión."); 
             
+            // Redirige a Login después de un breve tiempo
             setTimeout(() => {
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); 
-            }, 2000); 
+            }, 1500); 
 
+            // B. Guardar datos adicionales en Firestore
+            try {
+                await setDoc(doc(db, "users", user.uid), {
+                    firstName: firstName.trim(), // Guarda el nombre sin espacios extra
+                    lastName: lastName.trim(), // Guarda el apellido sin espacios extra
+                    email: email,
+                    createdAt: new Date()
+                });
+            } catch (firestoreError) {
+                // Fallo en la base de datos (ej. Reglas de Seguridad). La cuenta Auth ya existe.
+                console.error("Error al guardar datos de usuario en Firestore:", firestoreError);
+            }
+            
         } catch (error) {
+            // C. Manejo de errores de Firebase Authentication (Fallos críticos)
             let errorMessage = "Hubo un problema al registrar el usuario.";
             
             switch (error.code) {
                 case 'auth/email-already-in-use':
-                    errorMessage = "El correo electrónico ya está en uso. Intente con otro.";
+                    errorMessage = "El correo electrónico ya está en uso.";
                     break;
                 case 'auth/invalid-email':
                     errorMessage = "El formato del correo electrónico no es válido.";
                     break;
                 case 'auth/network-request-failed':
-                    errorMessage = "Error de conexión, por favor intenta más tarde.";
+                    errorMessage = "Error de conexión. Por favor, intenta más tarde.";
+                    break;
+                default:
+                    console.error("Error de registro (Auth):", error);
                     break;
             }
-            showAlert("Error", errorMessage);
+            showAlert("Error de Registro", errorMessage);
         }
     };
 
@@ -260,6 +366,7 @@ export default function SignUp({ navigation }) {
             end={{ x: 0.5, y: 1 }} 
             style={styles.contenedorFondo}
         >
+            {/* Renderiza la alerta personalizada */}
             <CustomAlert 
                 isVisible={isAlertVisible} 
                 title={alertData.title} 
@@ -280,6 +387,7 @@ export default function SignUp({ navigation }) {
                     
                     <View style={styles.contenedorBlanco}>
                         
+                        {/* Logo y Nombre de la Aplicación */}
                         <View style={styles.contenedorLogo}>
                             <View style={styles.bordeLogo}>
                                 <Image source={require('../assets/logo.png')} style={styles.logo} /> 
@@ -297,10 +405,14 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Nombre"
                                 value={firstName}
-                                onChangeText={setFirstName}
-                                autoCapitalize="words" 
+                                onChangeText={validateFirstName} // 👈 Validación en tiempo real
+                                autoCapitalize="words" // Pone en mayúscula la primer letra
+                                keyboardType="default"
                             />
                         </View>
+                        {/* Mensaje de error de Nombre */}
+                        {firstNameError ? <Text style={styles.textoError}>{firstNameError}</Text> : null}
+
 
                         {/* Campo Apellido */}
                         <Text style={styles.etiqueta}>Apellido</Text>
@@ -310,10 +422,14 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Apellido"
                                 value={lastName}
-                                onChangeText={setLastName}
-                                autoCapitalize="words" 
+                                onChangeText={validateLastName} // 👈 Validación en tiempo real
+                                autoCapitalize="words" // Pone en mayúscula la primer letra
+                                keyboardType="default"
                             />
                         </View>
+                        {/* Mensaje de error de Apellido */}
+                        {lastNameError ? <Text style={styles.textoError}>{lastNameError}</Text> : null}
+
 
                         {/* Campo Correo Electrónico */}
                         <Text style={styles.etiqueta}>Correo Electrónico</Text>
@@ -324,8 +440,8 @@ export default function SignUp({ navigation }) {
                                 placeholder="tecnoseguridad@gmail.com"
                                 value={email}
                                 onChangeText={setEmail}
-                                keyboardType="email-address"
-                                autoCapitalize="none"
+                                keyboardType="email-address" 
+                                autoCapitalize="none" 
                             />
                         </View>
 
@@ -338,23 +454,24 @@ export default function SignUp({ navigation }) {
                                 placeholder="Ingrese su Contraseña"
                                 value={password}
                                 onChangeText={validatePassword} 
-                                secureTextEntry={!showPassword}
+                                secureTextEntry={!showPassword} 
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
                         
-                        {/* requisitos activos */}
+                        {/* Requisitos de seguridad */}
                         <PasswordRequirements 
+                            hasLowercase={hasLowercase}
                             hasUppercase={hasUppercase}
                             hasNumber={hasNumber}
                             hasMinLength={hasMinLength}
                         />
-                        {/* Mostramos error por defecto de la contraseña (si existe) */}
+                        {/* Mensaje de error de complejidad */}
                         {passwordError ? <Text style={styles.textoError}>{passwordError}</Text> : null}
 
-                        {/* Campo Confirmar Contraseña (MODIFICADO) */}
+                        {/* Campo Confirmar Contraseña */}
                         <Text style={styles.etiqueta}>Confirmar Contraseña</Text>
                         <View style={styles.campoContenedor}>
                             <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
@@ -362,22 +479,23 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Confirme su Contraseña"
                                 value={confirmPassword}
-                                onChangeText={validateConfirmPassword} // 👈 Usamos la nueva función
+                                onChangeText={validateConfirmPassword} 
                                 secureTextEntry={!showConfirmPassword}
                             />
                             <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                                 <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
-                        {/* 👉 MOSTRAMOS EL ERROR DE COINCIDENCIA EN TIEMPO REAL */}
+                        
+                        {/* Mensaje de error si las contraseñas no coinciden */}
                         {confirmMatchError ? <Text style={styles.textoError}>{confirmMatchError}</Text> : null}
-                        {/* Mostramos el error de confirmación general (si existe) */}
-                        {confirmError ? <Text style={styles.textoError}>{confirmError}</Text> : null}
 
+                        {/* Botón de Registro */}
                         <TouchableOpacity style={styles.botonPrincipal} onPress={handleSignUp}>
                             <Text style={styles.textoBotonPrincipal}>Registrarse</Text>
                         </TouchableOpacity>
 
+                        {/* Enlace para ir al Login */}
                         <View style={styles.contenedorRegistro}>
                             <Text style={styles.textoRegistroGris}>¿Ya tienes cuenta? </Text>
                             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -485,7 +603,7 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         borderWidth: 1,
         borderColor: '#007AFF', 
-        marginBottom: 10,
+        marginBottom: 2, 
         paddingHorizontal: 10,
         width: '100%',
     },
@@ -500,10 +618,11 @@ const styles = StyleSheet.create({
     textoError: {
         color: '#FF4136', 
         fontSize: 12,
-        marginBottom: 5,
+        marginBottom: 8, 
         alignSelf: 'flex-start',
         width: '100%',
         paddingLeft: 5, 
+        fontWeight: '500',
     },
     botonPrincipal: {
         backgroundColor: '#1E90FF', 
