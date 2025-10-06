@@ -317,7 +317,7 @@ export default function SignUp({ navigation }) {
             const user = userCredential.user;
             
             // ÉXITO DE AUTENTICACIÓN
-            showAlert("Registro exitoso", "Cuenta creada. Serás redirigido a Iniciar Sesión."); 
+            showAlert("Registro exitoso", "Cuenta creada. Regresando a Inicio de Sesión."); 
             
             // Redirige a Login después de un breve tiempo
             setTimeout(() => {
@@ -497,7 +497,7 @@ export default function SignUp({ navigation }) {
 
                         {/* Enlace para ir al Login */}
                         <View style={styles.contenedorRegistro}>
-                            <Text style={styles.textoRegistroGris}>¿Ya tienes cuenta? </Text>
+                            <Text style={styles.textoRegistroGris}>¿Ya tenes cuenta? </Text>
                             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
                                 <Text style={styles.textoRegistroLink}>Inicia Sesión</Text>
                             </TouchableOpacity>

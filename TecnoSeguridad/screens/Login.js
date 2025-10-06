@@ -224,7 +224,7 @@ export default function Login({ navigation }) {
                     </TouchableOpacity>
 
                     <View style={styles.contenedorRegistro}>
-                        <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
+                        <Text style={styles.textoRegistroGris}>¿No tenes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
                             <Text style={styles.textoRegistroLinkSinSubrayado}>Regístrate aquí</Text>
                         </TouchableOpacity>
