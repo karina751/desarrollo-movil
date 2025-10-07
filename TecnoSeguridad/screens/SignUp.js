@@ -12,14 +12,19 @@ import {
     Modal, 
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { auth, db } from '../src/config/firebaseConfig'; 
-import { createUserWithEmailAndPassword } from 'firebase/auth'; 
-import { doc, setDoc } from 'firebase/firestore'; 
-import { LinearGradient } from 'expo-linear-gradient'; 
+import { auth, db } from '../src/config/firebaseConfig'; // Instancia de Auth y Firestore
+import { createUserWithEmailAndPassword } from 'firebase/auth'; // Función para crear usuario
+import { doc, setDoc } from 'firebase/firestore'; // Función para guardar datos en Firestore
+import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
 
-// Componente de Alerta Modal (CustomAlert)
-// Usado solo para mensajes de ÉXITO o ERRORES CRÍTICOS/DE FIREBASE.
-const CustomAlert = ({ isVisible, title, message, onClose }) => {
+
+// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
+const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
+    // Definir colores e íconos para retroalimentación (solo estos cambian)
+    const isSuccess = type === 'success';
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+
     return (
         <Modal
             animationType="fade"
@@ -28,12 +33,23 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
             onRequestClose={onClose}
         >
             <View style={customAlertStyles.modalContainer}>
-                <View style={customAlertStyles.alertBox}>
-                    <Text style={customAlertStyles.alertTitle}>{title}</Text>
-                    <Text style={customAlertStyles.alertMessage}>{message}</Text>
+                {/* El borde del alertbox usa el color de feedback */}
+                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
+                    
+                    {/* Contenedor del Ícono y Título */}
+                    <View style={customAlertStyles.headerContainer}>
+                         {/* El ícono usa el color de feedback */}
+                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                         {/* El título usa el color base AZUL */}
+                         <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
+                    </View>
+
+                    {/* El mensaje usa un color base azul/gris */}
+                    <Text style={customAlertStyles.alertMessageBase}>{message}</Text>
                     
                     <TouchableOpacity 
-                        style={customAlertStyles.alertButton} 
+                        // El botón usa el color de feedback
+                        style={[customAlertStyles.alertButton, { backgroundColor: feedbackColor }]} 
                         onPress={onClose}
                     >
                         <Text style={customAlertStyles.alertButtonText}>OK</Text>
@@ -52,31 +68,16 @@ const PasswordRequirements = ({ hasUppercase, hasLowercase, hasNumber, hasMinLen
 
     return (
         <View style={styles.requirementsContainer}>
-            <Text style={{ 
-                color: getColor(hasMinLength), 
-                fontSize: 12, 
-                marginBottom: 2 
-            }}>
+            <Text style={{ color: getColor(hasMinLength), fontSize: 12, marginBottom: 2 }}>
                 <FontAwesome name={hasMinLength ? "check-circle" : "circle-o"} size={12} /> Mínimo 8 caracteres
             </Text>
-            <Text style={{ 
-                color: getColor(hasLowercase), 
-                fontSize: 12, 
-                marginBottom: 2 
-            }}>
+            <Text style={{ color: getColor(hasLowercase), fontSize: 12, marginBottom: 2 }}>
                 <FontAwesome name={hasLowercase ? "check-circle" : "circle-o"} size={12} /> Al menos una letra minúscula
             </Text>
-            <Text style={{ 
-                color: getColor(hasUppercase), 
-                fontSize: 12, 
-                marginBottom: 2 
-            }}>
+            <Text style={{ color: getColor(hasUppercase), fontSize: 12, marginBottom: 2 }}>
                 <FontAwesome name={hasUppercase ? "check-circle" : "circle-o"} size={12} /> Al menos una letra mayúscula
             </Text>
-            <Text style={{ 
-                color: getColor(hasNumber), 
-                fontSize: 12 
-            }}>
+            <Text style={{ color: getColor(hasNumber), fontSize: 12 }}>
                 <FontAwesome name={hasNumber ? "check-circle" : "circle-o"} size={12} /> Al menos un número
             </Text>
         </View>
@@ -84,7 +85,7 @@ const PasswordRequirements = ({ hasUppercase, hasLowercase, hasNumber, hasMinLen
 };
 
 
-// Estilos para el Custom Alert
+// Estilos específicos para el Custom Alert (MODIFICADOS)
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -103,26 +104,33 @@ const customAlertStyles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 4,
         elevation: 5,
+        // El borde se aplica dinámicamente
     },
-    alertTitle: {
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    // Estilo base para el título (siempre azul)
+    alertTitleBase: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#007AFF', 
-        marginBottom: 10,
     },
-    alertMessage: {
+    // Estilo base para el mensaje (color neutral)
+    alertMessageBase: {
         fontSize: 15,
-        color: '#007AFF', 
+        color: '#555', 
         textAlign: 'center',
         marginBottom: 20,
     },
     alertButton: {
-        backgroundColor: '#007AFF', 
         borderRadius: 10,
         paddingVertical: 10,
         paddingHorizontal: 20,
         width: '100%',
         alignItems: 'center',
+        // El color de fondo se aplica dinámicamente
     },
     alertButtonText: {
         color: 'white', 
@@ -132,12 +140,9 @@ const customAlertStyles = StyleSheet.create({
 });
 
 
-/**
- * VALIDA FORMATO Y REPETICIÓN de nombres/apellidos.
- * (Se usa con el texto ya .trimmed())
- */
+// Valida formato (letras, acentos, espacios, guiones) y repetición.
 const isValidName = (text) => {
-    // 1. Regex para el formato de caracteres (letras, ñ, acentos, espacios, guiones).
+    // 1. Regex para el formato de caracteres.
     const nameRegex = /^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ'-]+$/;
     if (!nameRegex.test(text)) {
         return false; // Falla si tiene números o símbolos
@@ -179,42 +184,38 @@ export default function SignUp({ navigation }) {
 
     // Estados y funciones para el Custom Alert (Modal)
     const [isAlertVisible, setIsAlertVisible] = useState(false);
-    const [alertData, setAlertData] = useState({ title: '', message: '' });
+    // Añadido 'type' para el alert dinámico
+    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
 
-    const showAlert = (title, message) => {
-        setAlertData({ title, message });
+    // Muestra el Custom Alert con título, mensaje y tipo.
+    const showAlert = (title, message, type = 'error') => {
+        setAlertData({ title, message, type });
         setIsAlertVisible(true);
     };
 
+    // Oculta el Custom Alert
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
     
     
-    /**
-     * VALIDA NOMBRE EN TIEMPO REAL (Longitud, Solo Espacios, Formato, Repetición).
-     */
+    // Valida Nombre en tiempo real (longitud, espacios, formato, repetición).
     const validateFirstName = (text) => {
         setFirstName(text);
         
-        const trimmedText = text.trim(); // Contenido útil sin espacios iniciales/finales
+        const trimmedText = text.trim(); 
 
-        // Caso 1: Si el campo está completamente vacío (o solo tiene espacios)
+        // 1. Campo vacío o solo espacios
         if (trimmedText.length === 0) {
-            // Muestra el error si el usuario ha escrito solo espacios (text.length > 0)
-            if (text.length > 0) {
-                setFirstNameError("El nombre no puede ser solo espacios en blanco.");
-            } else {
-                setFirstNameError(''); // No hay error si no hay nada escrito
-            }
+            setFirstNameError(text.length > 0 ? "El nombre no puede ser solo espacios en blanco." : '');
             return;
         }
 
-        // Caso 2: Longitud útil (Mínimo 2 letras)
+        // 2. Longitud útil (Mínimo 2 letras)
         if (trimmedText.length < 2) {
             setFirstNameError("El nombre es demasiado corto (mínimo 2 letras útiles).");
         } 
-        // Caso 3: Formato y Repetición (Usa isValidName en el texto recortado)
+        // 3. Formato y Repetición
         else if (!isValidName(trimmedText)) {
             setFirstNameError("Solo se permiten letras, espacios o acentos, sin repeticiones excesivas.");
         } else {
@@ -222,30 +223,23 @@ export default function SignUp({ navigation }) {
         }
     };
     
-    /**
-     * VALIDA APELLIDO EN TIEMPO REAL (Longitud, Solo Espacios, Formato, Repetición).
-     */
+    // Valida Apellido en tiempo real (longitud, espacios, formato, repetición).
     const validateLastName = (text) => {
         setLastName(text);
         
-        const trimmedText = text.trim(); // Contenido útil sin espacios iniciales/finales
+        const trimmedText = text.trim(); 
 
-        // Caso 1: Si el campo está completamente vacío (o solo tiene espacios)
+        // 1. Campo vacío o solo espacios
         if (trimmedText.length === 0) {
-            // Muestra el error si el usuario ha escrito solo espacios (text.length > 0)
-            if (text.length > 0) {
-                setLastNameError("El apellido no puede ser solo espacios en blanco.");
-            } else {
-                setLastNameError(''); // No hay error si no hay nada escrito
-            }
+            setLastNameError(text.length > 0 ? "El apellido no puede ser solo espacios en blanco." : '');
             return;
         }
 
-        // Caso 2: Longitud útil (Mínimo 2 letras)
+        // 2. Longitud útil (Mínimo 2 letras)
         if (trimmedText.length < 2) {
             setLastNameError("El apellido es demasiado corto (mínimo 2 letras útiles).");
         } 
-        // Caso 3: Formato y Repetición (Usa isValidName en el texto recortado)
+        // 3. Formato y Repetición
         else if (!isValidName(trimmedText)) {
             setLastNameError("Solo se permiten letras, espacios o acentos, sin repeticiones excesivas.");
         } else {
@@ -253,16 +247,18 @@ export default function SignUp({ navigation }) {
         }
     };
     
-    // FUNCIÓN DE VALIDACIÓN DE COMPLEJIDAD DE CONTRASEÑA EN TIEMPO REAL
+    // Valida la complejidad de la contraseña en tiempo real.
     const validatePassword = (text) => {
         setPassword(text);
         setPasswordError(''); 
 
+        // Chequeo de complejidad
         setHasMinLength(text.length >= 8); 
         setHasLowercase(/[a-z]/.test(text)); 
         setHasUppercase(/[A-Z]/.test(text)); 
         setHasNumber(/\d/.test(text)); 
 
+        // Chequeo de coincidencia con la confirmación
         if (confirmPassword && text !== confirmPassword) {
             setConfirmMatchError("Las contraseñas no coinciden.");
         } else {
@@ -270,7 +266,7 @@ export default function SignUp({ navigation }) {
         }
     };
     
-    // FUNCIÓN PARA VALIDAR COINCIDENCIA DE CONFIRMACIÓN EN TIEMPO REAL
+    // Valida la coincidencia de la confirmación en tiempo real.
     const validateConfirmPassword = (text) => {
         setConfirmPassword(text);
         setConfirmMatchError('');
@@ -283,16 +279,17 @@ export default function SignUp({ navigation }) {
     };
 
 
+    // Maneja el proceso de registro completo (Auth y Firestore).
     const handleSignUp = async () => {
         // --- 1. VALIDACIONES FINALES ---
         
-        // 1.1. Validación: Campos Obligatorios (Verifica que no sean SOLO espacios usando .trim())
+        // 1.1. Validación: Campos Obligatorios
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
             showAlert("Error", "Todos los campos son obligatorios."); 
             return;
         }
         
-        // 1.2. Validación: Errores Visuales Pendientes (Si hay un error ya visible en rojo)
+        // 1.2. Validación: Errores Visuales Pendientes
         const hasVisibleError = firstNameError || lastNameError || passwordError || confirmMatchError;
 
         if (hasVisibleError) {
@@ -300,7 +297,7 @@ export default function SignUp({ navigation }) {
              return;
         }
         
-        // 1.3. Validación: Complejidad de Contraseña (Revisión final)
+        // 1.3. Validación: Complejidad de Contraseña
         const isPasswordValid = hasMinLength && hasLowercase && hasUppercase && hasNumber;
         if (!isPasswordValid) {
             setPasswordError("La contraseña no cumple con todos los requisitos.");
@@ -316,8 +313,8 @@ export default function SignUp({ navigation }) {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
             
-            // ÉXITO DE AUTENTICACIÓN
-            showAlert("Registro exitoso", "Cuenta creada. Regresando a Inicio de Sesión."); 
+            // ÉXITO DE AUTENTICACIÓN (Muestra verde)
+            showAlert("Registro exitoso", "Cuenta creada. Regresando a Inicio de Sesión.", 'success'); 
             
             // Redirige a Login después de un breve tiempo
             setTimeout(() => {
@@ -333,12 +330,12 @@ export default function SignUp({ navigation }) {
                     createdAt: new Date()
                 });
             } catch (firestoreError) {
-                // Fallo en la base de datos (ej. Reglas de Seguridad). La cuenta Auth ya existe.
+                // Fallo en la base de datos (la cuenta Auth ya existe)
                 console.error("Error al guardar datos de usuario en Firestore:", firestoreError);
             }
             
         } catch (error) {
-            // C. Manejo de errores de Firebase Authentication (Fallos críticos)
+            // C. Manejo de errores de Firebase Authentication (Muestra rojo)
             let errorMessage = "Hubo un problema al registrar el usuario.";
             
             switch (error.code) {
@@ -372,6 +369,7 @@ export default function SignUp({ navigation }) {
                 title={alertData.title} 
                 message={alertData.message} 
                 onClose={hideAlert} 
+                type={alertData.type} // Pasa el tipo ('error' o 'success')
             />
 
             <KeyboardAvoidingView
@@ -405,8 +403,8 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Nombre"
                                 value={firstName}
-                                onChangeText={validateFirstName} // 👈 Validación en tiempo real
-                                autoCapitalize="words" // Pone en mayúscula la primer letra
+                                onChangeText={validateFirstName} // Validación en tiempo real
+                                autoCapitalize="words" 
                                 keyboardType="default"
                             />
                         </View>
@@ -422,8 +420,8 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Apellido"
                                 value={lastName}
-                                onChangeText={validateLastName} // 👈 Validación en tiempo real
-                                autoCapitalize="words" // Pone en mayúscula la primer letra
+                                onChangeText={validateLastName} // Validación en tiempo real
+                                autoCapitalize="words" 
                                 keyboardType="default"
                             />
                         </View>

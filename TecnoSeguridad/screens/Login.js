@@ -11,12 +11,18 @@ import {
     Platform, 
     Modal, 
 } from 'react-native'; 
-import { FontAwesome } from '@expo/vector-icons'; // Iconos
+import { FontAwesome } from '@expo/vector-icons'; // Íconos
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Función de autenticación de Firebase
 import { auth } from '../src/config/firebaseConfig'; // Instancia de autenticación de Firebase
 import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
 
-const CustomAlert = ({ isVisible, title, message, onClose }) => {
+// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
+const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
+    // Definir colores e íconos para retroalimentación (solo estos cambian)
+    const isSuccess = type === 'success';
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+
     return (
         <Modal
             animationType="fade"
@@ -25,12 +31,23 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
             onRequestClose={onClose}
         >
             <View style={customAlertStyles.modalContainer}>
-                <View style={customAlertStyles.alertBox}>
-                    <Text style={customAlertStyles.alertTitle}>{title}</Text>
-                    <Text style={customAlertStyles.alertMessage}>{message}</Text>
+                {/* El borde del alertbox usa el color de feedback */}
+                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
+                    
+                    {/* Contenedor del Ícono y Título */}
+                    <View style={customAlertStyles.headerContainer}>
+                         {/* El ícono usa el color de feedback */}
+                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                         {/* El título usa el color base AZUL */}
+                         <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
+                    </View>
+
+                    {/* El mensaje usa un color base azul/gris */}
+                    <Text style={customAlertStyles.alertMessageBase}>{message}</Text>
                     
                     <TouchableOpacity 
-                        style={customAlertStyles.alertButton} 
+                        // El botón usa el color de feedback
+                        style={[customAlertStyles.alertButton, { backgroundColor: feedbackColor }]} 
                         onPress={onClose}
                     >
                         <Text style={customAlertStyles.alertButtonText}>OK</Text>
@@ -41,7 +58,7 @@ const CustomAlert = ({ isVisible, title, message, onClose }) => {
     );
 };
 
-// Estilos para el custom alert
+// Estilos específicos para el Custom Alert
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -51,7 +68,7 @@ const customAlertStyles = StyleSheet.create({
     },
     alertBox: {
         width: 300,
-        backgroundColor: 'white', // Fondo Blanco
+        backgroundColor: 'white', 
         borderRadius: 15,
         padding: 20,
         alignItems: 'center',
@@ -61,20 +78,25 @@ const customAlertStyles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 5,
     },
-    alertTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#007AFF', // Letras Azules
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 10,
     },
-    alertMessage: {
+    // Estilo base para el título (siempre azul)
+    alertTitleBase: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#007AFF', // Color principal de la app
+    },
+    // Estilo base para el mensaje (color neutral)
+    alertMessageBase: {
         fontSize: 15,
-        color: '#007AFF', // Letras Azules
+        color: '#555', 
         textAlign: 'center',
         marginBottom: 20,
     },
     alertButton: {
-        backgroundColor: '#007AFF', // Fondo Azul
         borderRadius: 10,
         paddingVertical: 10,
         paddingHorizontal: 20,
@@ -82,26 +104,26 @@ const customAlertStyles = StyleSheet.create({
         alignItems: 'center',
     },
     alertButtonText: {
-        color: 'white', // Letras Blancas
+        color: 'white', 
         fontSize: 16,
         fontWeight: 'bold',
     },
 });
 
 
-
 export default function Login({ navigation }) {
-    const [email, setEmail] = useState(''); // Estado para el correo electrónico
-    const [password, setPassword] = useState(''); // Estado para la contraseña
-    const [showPassword, setShowPassword] = useState(false); // Alternar visibilidad de contraseña
+    // Estados para campos de entrada y visibilidad
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     
-    // Estados para el Custom Alert
-    const [isAlertVisible, setIsAlertVisible] = useState(false); // Controlar visibilidad del modal
-    const [alertData, setAlertData] = useState({ title: '', message: '' }); // Contenido del modal
+    // Estados para el Custom Alert (incluye 'type')
+    const [isAlertVisible, setIsAlertVisible] = useState(false);
+    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
 
-    // Muestra el Custom Alert
-    const showAlert = (title, message) => {
-        setAlertData({ title, message });
+    // Muestra el Custom Alert con título, mensaje y tipo.
+    const showAlert = (title, message, type = 'error') => {
+        setAlertData({ title, message, type }); // Almacena el tipo
         setIsAlertVisible(true);
     };
 
@@ -110,55 +132,67 @@ export default function Login({ navigation }) {
         setIsAlertVisible(false);
     };
 
-    // Maneja la lógica de inicio de sesión con Firebase
+    // Maneja la lógica de inicio de sesión con Firebase Auth.
     const handleLogin = async () => {
-        if (!email || !password) {
-            showAlert("Error", "Por favor ingresa ambos campos."); // Usando Custom Alert
+        // Validación de campos no vacíos
+        if (!email.trim() || !password.trim()) {
+            showAlert("Error de campos", "Por favor ingresa tu correo y contraseña."); 
             return;
         }
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            showAlert("Login exitoso", "Has iniciado sesión correctamente."); // Usando Custom Alert
-            // Navegación a Home y reseteo del stack
-            navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
+            // Intento de iniciar sesión con Firebase
+            await signInWithEmailAndPassword(auth, email.trim(), password.trim());
+            
+            // ÉXITO: Usamos el tipo 'success' (mostrará verde)
+            showAlert("Login exitoso", "Has iniciado sesión correctamente.", 'success'); 
+            
+            // Redirigir a Home y resetear el stack de navegación
+            setTimeout(() => {
+                navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
+            }, 1500);
+
         } catch (error) {
+            // Manejo de errores de Firebase Authentication
             let errorMessage = "Hubo un problema al iniciar sesión.";
             switch (error.code) {
                 case 'auth/invalid-email':
-                    errorMessage = "El formato del correo electrónico no es válido.";
-                    break;
                 case 'auth/user-not-found':
                 case 'auth/wrong-password':
+                    // Mensaje genérico por seguridad
                     errorMessage = "Correo o contraseña incorrectos.";
                     break;
                 case 'auth/network-request-failed':
                     errorMessage = "Error de conexión, por favor intenta más tarde.";
                     break;
+                default:
+                    console.error("Error de login (Auth):", error.code);
+                    break;
             }
-            // Muestra el mensaje de error con el Custom Alert 
-            showAlert("Error", errorMessage);
+            // Muestra el mensaje de error (usa el valor por defecto 'error', mostrará rojo)
+            showAlert("Error de autenticación", errorMessage);
         }
     };
 
     return (
     <LinearGradient
-        colors={['#97c1e6', '#e4eff9']} // Colores de gradiente de fondo
+        colors={['#97c1e6', '#e4eff9']} 
         start={{ x: 0.5, y: 0 }} 
         end={{ x: 0.5, y: 1 }} 
         style={styles.contenedorFondo}
-    >  
-        {/* Renderiza el Custom Alert */}
+    > 
+        {/* Renderiza el Custom Alert con el tipo de mensaje */}
         <CustomAlert 
             isVisible={isAlertVisible} 
             title={alertData.title} 
             message={alertData.message} 
             onClose={hideAlert} 
+            type={alertData.type} // Pasa el tipo ('error' o 'success')
         />
         
         <KeyboardAvoidingView
             style={styles.contenedorFondo}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // Ajuste de teclado
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
             keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
             enabled
         >
@@ -171,6 +205,7 @@ export default function Login({ navigation }) {
                     {/* Sección del logo */}
                     <View style={styles.contenedorLogo}>
                         <View style={styles.bordeLogo}>
+                            {/* Ruta de imagen local */}
                             <Image source={require('../assets/logo.png')} style={styles.logo} /> 
                         </View>
                         <Text style={styles.nombreApp}>TecnoSeguridad</Text>
@@ -189,6 +224,7 @@ export default function Login({ navigation }) {
                             onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
@@ -202,12 +238,15 @@ export default function Login({ navigation }) {
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
+                            autoCorrect={false}
                         />
+                        {/* Botón para alternar visibilidad de contraseña */}
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                             <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" /> 
                         </TouchableOpacity>
                     </View>
                     
+                    {/* Botón de Olvidaste Contraseña (navegación pendiente) */}
                     <TouchableOpacity style={styles.botonOlvido}>
                         <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
                     </TouchableOpacity>
@@ -217,12 +256,13 @@ export default function Login({ navigation }) {
                         <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
                     </TouchableOpacity>
 
-                    {/* Botón de Google */}
-                    <TouchableOpacity style={styles.botonGoogle}>
+                    {/* Botón de Google (Deshabilitado, pendiente de implementación) */}
+                    <TouchableOpacity style={styles.botonGoogle} disabled>
                         <FontAwesome name="google" size={20} color="#db4437" style={styles.iconoGoogle} /> 
                         <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
                     </TouchableOpacity>
 
+                    {/* Enlace a Registro */}
                     <View style={styles.contenedorRegistro}>
                         <Text style={styles.textoRegistroGris}>¿No tenes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
