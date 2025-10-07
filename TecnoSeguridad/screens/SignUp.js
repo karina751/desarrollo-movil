@@ -69,7 +69,7 @@ const PasswordRequirements = ({ hasUppercase, hasLowercase, hasNumber, hasMinLen
     return (
         <View style={styles.requirementsContainer}>
             <Text style={{ color: getColor(hasMinLength), fontSize: 12, marginBottom: 2 }}>
-                <FontAwesome name={hasMinLength ? "check-circle" : "circle-o"} size={12} /> Mínimo 8 caracteres
+                <FontAwesome name={hasMinLength ? "check-circle" : "circle-o"} size={12} /> Mínimo 6 caracteres
             </Text>
             <Text style={{ color: getColor(hasLowercase), fontSize: 12, marginBottom: 2 }}>
                 <FontAwesome name={hasLowercase ? "check-circle" : "circle-o"} size={12} /> Al menos una letra minúscula
@@ -253,7 +253,7 @@ export default function SignUp({ navigation }) {
         setPasswordError('');
 
         // Chequeo de complejidad
-        setHasMinLength(text.length >= 8);
+        setHasMinLength(text.length >= 6);
         setHasLowercase(/[a-z]/.test(text));
         setHasUppercase(/[A-Z]/.test(text));
         setHasNumber(/\d/.test(text));
