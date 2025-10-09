@@ -4,64 +4,208 @@ import {
     Text, 
     TextInput, 
     TouchableOpacity, 
-    Alert, 
     Image, 
     StyleSheet, 
     ScrollView, 
+    KeyboardAvoidingView, 
+    Platform, 
+    Modal, 
 } from 'react-native'; 
-import { FontAwesome } from '@expo/vector-icons';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../src/config/firebaseConfig';
-import { LinearGradient } from 'expo-linear-gradient'; 
+import { FontAwesome } from '@expo/vector-icons'; // Íconos
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Función de autenticación de Firebase
+import { auth } from '../src/config/firebaseConfig'; // Instancia de autenticación de Firebase
+import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
+
+// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
+const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
+    // Definir colores e íconos para retroalimentación (solo estos cambian)
+    const isSuccess = type === 'success';
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+
+    return (
+        <Modal
+            animationType="fade"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <View style={customAlertStyles.modalContainer}>
+                {/* El borde del alertbox usa el color de feedback */}
+                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
+                    
+                    {/* Contenedor del Ícono y Título */}
+                    <View style={customAlertStyles.headerContainer}>
+                         {/* El ícono usa el color de feedback */}
+                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                         {/* El título usa el color base AZUL */}
+                         <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
+                    </View>
+
+                    {/* El mensaje usa un color base azul/gris */}
+                    <Text style={customAlertStyles.alertMessageBase}>{message}</Text>
+                    
+                    <TouchableOpacity 
+                        // El botón usa el color de feedback
+                        style={[customAlertStyles.alertButton, { backgroundColor: feedbackColor }]} 
+                        onPress={onClose}
+                    >
+                        <Text style={customAlertStyles.alertButtonText}>OK</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+// Estilos específicos para el Custom Alert
+const customAlertStyles = StyleSheet.create({
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Overlay oscuro
+    },
+    alertBox: {
+        width: 300,
+        backgroundColor: 'white', 
+        borderRadius: 15,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    headerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    // Estilo base para el título (siempre azul)
+    alertTitleBase: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#007AFF', // Color principal de la app
+    },
+    // Estilo base para el mensaje (color neutral)
+    alertMessageBase: {
+        fontSize: 15,
+        color: '#555', 
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    alertButton: {
+        borderRadius: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        width: '100%',
+        alignItems: 'center',
+    },
+    alertButtonText: {
+        color: 'white', 
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+});
+
 
 export default function Login({ navigation }) {
+    // Estados para campos de entrada y visibilidad
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    
+    // Estados para el Custom Alert (incluye 'type')
+    const [isAlertVisible, setIsAlertVisible] = useState(false);
+    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
 
+    // Muestra el Custom Alert con título, mensaje y tipo.
+    const showAlert = (title, message, type = 'error') => {
+        setAlertData({ title, message, type }); // Almacena el tipo
+        setIsAlertVisible(true);
+    };
+
+    // Oculta el Custom Alert
+    const hideAlert = () => {
+        setIsAlertVisible(false);
+    };
+
+    // Maneja la lógica de inicio de sesión con Firebase Auth.
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert("Error", "Por favor ingrese ambos campos.");
+        // Validación de campos no vacíos
+        if (!email.trim() || !password.trim()) {
+            showAlert("Error de campos", "Por favor ingresa tu correo y contraseña."); 
             return;
         }
 
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            Alert.alert("Login exitoso", "Has iniciado sesión correctamente.");
-            navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
+            // Intento de iniciar sesión con Firebase
+            await signInWithEmailAndPassword(auth, email.trim(), password.trim());
+            
+            // ÉXITO: Usamos el tipo 'success' (mostrará verde)
+            showAlert("Login exitoso", "Has iniciado sesión correctamente.", 'success'); 
+            
+            // Redirigir a Home y resetear el stack de navegación
+            setTimeout(() => {
+                navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
+            }, 1500);
+
         } catch (error) {
-            let errorMessage = "Hubo Algun un problema al iniciar sesión.";
+            // Manejo de errores de Firebase Authentication
+            let errorMessage = "Hubo un problema al iniciar sesión.";
             switch (error.code) {
                 case 'auth/invalid-email':
-                    errorMessage = "El formato del correo electrónico no es válido.";
-                    break;
                 case 'auth/user-not-found':
                 case 'auth/wrong-password':
+                    // Mensaje genérico por seguridad
                     errorMessage = "Correo o contraseña incorrectos.";
                     break;
                 case 'auth/network-request-failed':
                     errorMessage = "Error de conexión, por favor intenta más tarde.";
                     break;
+                default:
+                    console.error("Error de login (Auth):", error.code);
+                    break;
             }
-            Alert.alert("Error", errorMessage);
+            // Muestra el mensaje de error (usa el valor por defecto 'error', mostrará rojo)
+            showAlert("Error de autenticación", errorMessage);
         }
     };
 
     return (
-        <LinearGradient
-            colors={['#97c1e6', '#e4eff9']} 
-            start={{ x: 0.5, y: 0 }}       
-            end={{ x: 0.5, y: 1 }}         
+    <LinearGradient
+        colors={['#97c1e6', '#e4eff9']} 
+        start={{ x: 0.5, y: 0 }} 
+        end={{ x: 0.5, y: 1 }} 
+        style={styles.contenedorFondo}
+    > 
+        {/* Renderiza el Custom Alert con el tipo de mensaje */}
+        <CustomAlert 
+            isVisible={isAlertVisible} 
+            title={alertData.title} 
+            message={alertData.message} 
+            onClose={hideAlert} 
+            type={alertData.type} // Pasa el tipo ('error' o 'success')
+        />
+        
+        <KeyboardAvoidingView
             style={styles.contenedorFondo}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} 
+            enabled
         >
-            {/* Estructura simple y robusta para scroll */}
-            <ScrollView contentContainerStyle={styles.scrollContenido}>
-                
+            <ScrollView 
+                contentContainerStyle={styles.scrollContenido}
+                keyboardShouldPersistTaps="handled" // Permite clicks sin cerrar el teclado
+            >
                 <View style={styles.contenedorBlanco}>
                     
+                    {/* Sección del logo */}
                     <View style={styles.contenedorLogo}>
                         <View style={styles.bordeLogo}>
-                            {/* Verifica la ruta de tu logo: '../assets/logo.png' */}
+                            {/* Ruta de imagen local */}
                             <Image source={require('../assets/logo.png')} style={styles.logo} /> 
                         </View>
                         <Text style={styles.nombreApp}>TecnoSeguridad</Text>
@@ -69,6 +213,7 @@ export default function Login({ navigation }) {
 
                     <Text style={styles.titulo}>Iniciar Sesión</Text>
 
+                    {/* Campo de Correo Electrónico */}
                     <Text style={styles.etiqueta}>Correo Electrónico</Text>
                     <View style={styles.campoContenedor}>
                         <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
@@ -79,48 +224,59 @@ export default function Login({ navigation }) {
                             onChangeText={setEmail}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
+                    {/* Campo de Contraseña */}
                     <Text style={styles.etiqueta}>Contraseña</Text>
                     <View style={styles.campoContenedor}>
                         <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.campoEntrada}
-                            placeholder="Contraseña"
+                            placeholder={"Contraseña"}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword}
+                            autoCorrect={false}
                         />
+                        {/* Botón para alternar visibilidad de contraseña */}
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
+                            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" /> 
                         </TouchableOpacity>
                     </View>
                     
+                    {/* Botón de Olvidaste Contraseña (navegación pendiente) */}
                     <TouchableOpacity style={styles.botonOlvido}>
                         <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
                     </TouchableOpacity>
 
+                    {/* Botón Principal de Login */}
                     <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
                         <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.botonGoogle}>
+                    {/* Botón de Google (Deshabilitado, pendiente de implementación) */}
+                    <TouchableOpacity style={styles.botonGoogle} disabled>
                         <FontAwesome name="google" size={20} color="#db4437" style={styles.iconoGoogle} /> 
                         <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
                     </TouchableOpacity>
 
+                    {/* Enlace a Registro */}
                     <View style={styles.contenedorRegistro}>
-                        <Text style={styles.textoRegistroGris}>¿No tienes cuenta? </Text>
+                        <Text style={styles.textoRegistroGris}>¿No tenes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-                            <Text style={styles.textoRegistroLink}>Regístrate aquí</Text>
+                            <Text style={styles.textoRegistroLinkSinSubrayado}>Regístrate aquí</Text>
                         </TouchableOpacity>
                     </View>
+                    
                 </View>
             </ScrollView>
-        </LinearGradient>
-    );
+        </KeyboardAvoidingView>
+    </LinearGradient>
+);
 }
+
 
 const styles = StyleSheet.create({
     contenedorFondo: {
@@ -128,9 +284,8 @@ const styles = StyleSheet.create({
     },
     scrollContenido: {
         flexGrow: 1, 
-        // 🎯 AJUSTE: Quitamos el centrado para asegurar que el scroll funcione inmediatamente
-        // justifyContent: 'center', 
-        paddingVertical: 0, 
+        justifyContent: 'center', 
+        paddingVertical: 40, 
         paddingHorizontal: 30, 
         alignItems: 'center', 
         width: '100%',
@@ -138,8 +293,7 @@ const styles = StyleSheet.create({
     contenedorBlanco: {
         backgroundColor: '#fff',
         width: '100%', 
-        // 🚨 CRÍTICO: NO tiene flex: 1.
-        paddingVertical: 15, // Mínimo padding interior
+        paddingVertical: 60, 
         paddingHorizontal: 25,
         borderRadius: 10, 
         alignItems: 'center',
@@ -150,7 +304,6 @@ const styles = StyleSheet.create({
         shadowRadius: 10,
         elevation: 10,
     },
-    // Estilos internos con márgenes y paddings reducidos para conservar espacio
     contenedorRegistro: {
         flexDirection: 'row',
         marginTop: 15, 
@@ -160,10 +313,9 @@ const styles = StyleSheet.create({
         color: '#555', 
         fontSize: 14,
     },
-    textoRegistroLink: {
+    textoRegistroLinkSinSubrayado: { 
         color: '#007AFF', 
         fontSize: 14,
-        textDecorationLine: 'underline',
         fontWeight: '600',
     },
     contenedorLogo: {
@@ -218,9 +370,8 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     campoEntrada: {
-        // 🚨 CRÍTICO: Eliminamos 'flex: 1' para evitar dimensionamiento excesivo
         height: 40, 
-        width: '85%', // Aseguramos que ocupe el espacio principal
+        width: '85%', 
         color: '#333',
     },
     botonOlvido: {
@@ -264,6 +415,6 @@ const styles = StyleSheet.create({
     textoBotonGoogle: {
         color: '#007AFF', 
         fontSize: 14, 
-        fontWeight: 'normal', 
+        fontWeight: 'normal',
     },
 });

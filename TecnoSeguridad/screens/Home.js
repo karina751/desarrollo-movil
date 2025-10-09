@@ -48,10 +48,6 @@ export default function Home({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    backgroundColor: '#A8C5DD',
-  },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -75,21 +71,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     width: 100,
     height: 100,
-    borderRadius: 15,
-    borderWidth: 4,
-    borderColor: '#1E88E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-    backgroundColor: '#B8D4E8',
-    padding: 5,
+    marginBottom: 20,
   },
-  logo: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  brandName: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#4A90E2',
