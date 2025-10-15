@@ -9,13 +9,68 @@ import {
     ScrollView,
     ActivityIndicator,
     Alert,
+    Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { auth, db, storage } from '../src/config/firebaseConfig';
+import { auth, db } from '../src/config/firebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+
+// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
+const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
+    // Definir colores e íconos para retroalimentación
+    const isSuccess = type === 'success';
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+
+    return (
+        <Modal
+            animationType="fade"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <View style={customAlertStyles.modalContainer}>
+                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
+                    <View style={customAlertStyles.headerContainer}>
+                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                         <Text style={[customAlertStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
+                    </View>
+                    <Text style={[customAlertStyles.alertMessageBase, { color: feedbackColor }]}>{message}</Text>
+                    <TouchableOpacity 
+                        style={[customAlertStyles.alertButton, { backgroundColor: feedbackColor }]} 
+                        onPress={onClose}
+                    >
+                        <Text style={customAlertStyles.alertButtonText}>OK</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+// Estilos específicos para el Custom Alert
+const customAlertStyles = StyleSheet.create({
+    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+    alertBox: {
+        width: 300,
+        backgroundColor: 'white',
+        borderRadius: 15,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    alertTitleBase: { fontSize: 18, fontWeight: 'bold' },
+    alertMessageBase: { fontSize: 15, textAlign: 'center', marginBottom: 20 },
+    alertButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, width: '100%', alignItems: 'center' },
+    alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+});
 
 export default function Perfil() {
     const [firstName, setFirstName] = useState('');
@@ -25,6 +80,18 @@ export default function Perfil() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     
+    // Estados para el Custom Alert
+    const [isAlertVisible, setIsAlertVisible] = useState(false);
+    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
+    const showAlert = (title, message, type = 'error') => {
+        setAlertData({ title, message, type });
+        setIsAlertVisible(true);
+    };
+    const hideAlert = () => {
+        setIsAlertVisible(false);
+    };
+
+    // Al cargar la pantalla, obtenemos los datos del usuario desde Firestore.
     useEffect(() => {
         const fetchUserData = async () => {
             if (auth.currentUser) {
@@ -44,62 +111,47 @@ export default function Perfil() {
         fetchUserData();
     }, []);
 
+    // 1. Lógica para seleccionar y subir una imagen de perfil
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.');
+            showAlert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.');
             return;
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
+            allowsEditing: true, // Permitimos que el usuario edite la imagen.
+            aspect: [1, 1], // Forzamos un formato cuadrado (1:1).
             quality: 1,
         });
 
         if (!result.canceled) {
-            uploadImage(result.assets[0].uri);
+            // Guardamos la URL local de la imagen en Firestore.
+            saveLocalImageUri(result.assets[0].uri);
         }
     };
-
-    const uploadImage = async (uri) => {
+    
+    // 2. Lógica para guardar la URL de la imagen en Firestore
+    const saveLocalImageUri = async (uri) => {
         setIsSaving(true);
         try {
-            const blob = await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.onload = function () {
-                    resolve(xhr.response);
-                };
-                xhr.onerror = function (e) {
-                    console.log(e);
-                    reject(new TypeError('Network request failed'));
-                };
-                xhr.responseType = 'blob';
-                xhr.open('GET', uri, true);
-                xhr.send(null);
-            });
-
             const userUID = auth.currentUser.uid;
-            const storageRef = ref(storage, `profileImages/${userUID}`);
-            
-            await uploadBytes(storageRef, blob);
-            
-            const imageUrl = await getDownloadURL(storageRef);
-            
             const userRef = doc(db, 'users', userUID);
-            await updateDoc(userRef, { profileImage: imageUrl });
             
-            setProfileImage(imageUrl);
-            Alert.alert('Éxito', 'Foto de perfil actualizada correctamente.');
+            await updateDoc(userRef, { profileImage: uri });
+            
+            setProfileImage(uri);
+            showAlert('Éxito', 'Foto de perfil actualizada correctamente.', 'success');
         } catch (error) {
-            console.error('Error al subir la imagen:', error);
-            Alert.alert('Error', 'No se pudo actualizar la foto de perfil.');
+            console.error('Error al guardar la URL de la imagen:', error);
+            showAlert('Error', 'No se pudo actualizar la foto de perfil.');
         } finally {
             setIsSaving(false);
         }
     };
-    
+
+    // 3. Lógica para guardar los cambios en el formulario
     const handleSaveChanges = async () => {
         setIsSaving(true);
         try {
@@ -108,10 +160,10 @@ export default function Perfil() {
                 firstName: firstName,
                 lastName: lastName,
             });
-            Alert.alert('Éxito', 'Datos de perfil actualizados correctamente.');
+            showAlert('Éxito', 'Datos de perfil actualizados correctamente.', 'success');
         } catch (error) {
             console.error('Error al guardar los cambios:', error);
-            Alert.alert('Error', 'No se pudieron guardar los cambios.');
+            showAlert('Error', 'No se pudieron guardar los cambios.');
         } finally {
             setIsSaving(false);
         }
@@ -133,6 +185,14 @@ export default function Perfil() {
             end={{ x: 0.5, y: 1 }}
             style={styles.container}
         >
+            <CustomAlert
+                isVisible={isAlertVisible}
+                title={alertData.title}
+                message={alertData.message}
+                onClose={hideAlert}
+                type={alertData.type}
+            />
+
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.card}>
                     <Text style={styles.title}>Mi Perfil</Text>

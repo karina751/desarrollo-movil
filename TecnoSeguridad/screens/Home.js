@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; // Importar useEffect
 import { 
     View, 
     Text, 
@@ -7,9 +7,11 @@ import {
     Image, 
     Modal, 
     ScrollView,
+    ActivityIndicator, // Importar ActivityIndicator para el estado de carga
 } from 'react-native';
 import { signOut } from 'firebase/auth';
-import { auth } from '../src/config/firebaseConfig';
+import { auth, db } from '../src/config/firebaseConfig'; // Importar db para Firestore
+import { doc, getDoc } from 'firebase/firestore'; // Importar doc y getDoc para obtener datos
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,6 +75,26 @@ export default function Home({ navigation }) {
     
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
+    const [profileImage, setProfileImage] = useState(null); // Estado para la URL de la imagen de perfil
+    const [isLoading, setIsLoading] = useState(true); // Estado para controlar la carga de datos del perfil
+
+    // useEffect para cargar la imagen de perfil cuando el componente se monta
+    useEffect(() => {
+        const fetchProfileImage = async () => {
+            if (auth.currentUser) {
+                const userRef = doc(db, 'users', auth.currentUser.uid);
+                const docSnap = await getDoc(userRef);
+
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    // Usamos la URL de la foto de perfil o null si no existe
+                    setProfileImage(userData.profileImage || null);
+                }
+            }
+            setIsLoading(false); // Desactivar el estado de carga una vez que se intentó obtener la imagen
+        };
+        fetchProfileImage();
+    }, []); // El array vacío asegura que se ejecute solo una vez al montar
 
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
@@ -93,6 +115,32 @@ export default function Home({ navigation }) {
             showAlert("Error", "Hubo un problema al cerrar sesión.");
         }
     };
+
+    // Función para renderizar el avatar de perfil (imagen o icono)
+    const renderProfileAvatar = () => {
+        if (profileImage) {
+            return (
+                <Image
+                    source={{ uri: profileImage }}
+                    style={styles.profileImage}
+                />
+            );
+        } else {
+            return (
+                <FontAwesome name="user-circle" size={30} color="#007AFF" /> 
+            );
+        }
+    };
+
+    // Mostrar un indicador de carga mientras se obtienen los datos del perfil
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>Cargando perfil...</Text>
+            </View>
+        );
+    }
 
     return (
         <View style={styles.fullScreenContainer}>
@@ -115,7 +163,8 @@ export default function Home({ navigation }) {
                             />
                         </View>
                         <TouchableOpacity onPress={() => navigation.navigate('Perfil')}>
-                            <FontAwesome name="user-circle" size={30} color="#007AFF" /> 
+                            {/* Renderizamos el avatar dinámicamente */}
+                            {renderProfileAvatar()}
                         </TouchableOpacity>
                     </View>
 
@@ -179,6 +228,17 @@ const styles = StyleSheet.create({
         flex: 1, 
         backgroundColor: '#f8f8f8',
     },
+    loadingContainer: { // Estilos para el contenedor de carga
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: '#e4eff9' 
+    },
+    loadingText: { // Estilos para el texto de carga
+        marginTop: 10, 
+        fontSize: 16, 
+        color: '#007AFF' 
+    },
     scrollContent: { 
         paddingBottom: 20, 
     },
@@ -190,8 +250,13 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         backgroundColor: '#FFFFFF',
     },
-    logoContainer: { width: 40, height: 40 },
+    logoContainer: { width: 60, height: 60 },
     logo: { width: '100%', height: '100%', resizeMode: 'contain' },
+    profileImage: { // Estilo para la imagen de perfil
+        width: 60, 
+        height: 60, 
+        borderRadius: 30, // Para hacerla circular
+    },
     welcomeCard: {
         margin: 15,
         padding: 20,
