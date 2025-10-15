@@ -19,7 +19,6 @@ import Servicios from '../screens/Servicios';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Pantalla de carga para esperar la autenticación
 function LoadingScreen() {
     return (
         <View style={styles.loadingContainer}>
@@ -28,7 +27,6 @@ function LoadingScreen() {
     );
 }
 
-// Contenedor de pestañas inferiores para pantallas autenticadas
 function HomeTabs() {
     return (
         <Tab.Navigator
@@ -59,7 +57,6 @@ function HomeTabs() {
     );
 }
 
-// Navegador principal que gestiona el flujo de autenticación
 function Navigation() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -81,10 +78,8 @@ function Navigation() {
             <NavigationContainer>
                 <Stack.Navigator screenOptions={{ headerShown: false }}>
                     {isAuthenticated ? (
-                        // Si el usuario está autenticado, muestra las pestañas inferiores
                         <Stack.Screen name="HomeTabs" component={HomeTabs} />
                     ) : (
-                        // Si no, muestra las pantallas de autenticación
                         <>
                             <Stack.Screen name="Login" component={Login} />
                             <Stack.Screen name="SignUp" component={SignUp} />
