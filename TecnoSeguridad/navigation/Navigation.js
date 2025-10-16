@@ -73,28 +73,6 @@ function Navigation() {
         return <LoadingScreen />; 
     }
 
-<<<<<<< HEAD
-  // 1. Mostrar la pantalla de carga si aún no se ha verificado el estado de Firebase
-  if (isLoading) {
-      return <LoadingScreen />; 
-  }
-
-  // 2. Ocultar el header en todas las pantallas con 'screenOptions'
-  return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName={isAuthenticated ? "Home" : "Login"}
-        screenOptions={{ 
-          headerShown: false 
-        }}
-      >
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="SignUp" component={SignUp} />
-        <Stack.Screen name="Home" component={Home} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-=======
     return (
         <SafeAreaProvider>
             <NavigationContainer>
@@ -111,7 +89,6 @@ function Navigation() {
             </NavigationContainer>
         </SafeAreaProvider>
     );
->>>>>>> test-kary
 }
 
 const styles = StyleSheet.create({
