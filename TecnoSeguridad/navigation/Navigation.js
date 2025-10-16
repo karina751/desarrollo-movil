@@ -15,6 +15,7 @@ import Home from '../screens/Home';
 import Perfil from '../screens/Perfil';
 import Productos from '../screens/Productos';
 import Servicios from '../screens/Servicios';
+import AdminProductos from '../screens/AdminProductos';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -27,7 +28,8 @@ function LoadingScreen() {
     );
 }
 
-function HomeTabs() {
+// Contenedor de pestañas inferiores para pantallas autenticadas
+function HomeTabs() { // ❌ NOTA: No lleva 'export default'
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -57,7 +59,8 @@ function HomeTabs() {
     );
 }
 
-function Navigation() {
+// Navegador principal que gestiona el flujo de autenticación
+export default function Navigation() { // ✅ Única exportación por defecto
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -78,7 +81,10 @@ function Navigation() {
             <NavigationContainer>
                 <Stack.Navigator screenOptions={{ headerShown: false }}>
                     {isAuthenticated ? (
-                        <Stack.Screen name="HomeTabs" component={HomeTabs} />
+                        <>
+                            <Stack.Screen name="HomeTabs" component={HomeTabs} />
+                            <Stack.Screen name="AdminProductos" component={AdminProductos} />
+                        </>
                     ) : (
                         <>
                             <Stack.Screen name="Login" component={Login} />
@@ -99,5 +105,3 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8f8f8',
     },
 });
-
-export default Navigation;
