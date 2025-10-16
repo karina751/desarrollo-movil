@@ -9,13 +9,15 @@ import {
     ScrollView, 
     KeyboardAvoidingView, 
     Platform, 
-    Modal, 
+    Modal,
+    ActivityIndicator
 } from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'; 
 import { auth } from '../src/config/firebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// Componente CustomAlert: Modal de alerta con ícono y color 
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136';
@@ -47,6 +49,7 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
     );
 };
 
+// Estilos específicos para el Custom Alert
 const customAlertStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
     alertBox: {
@@ -68,19 +71,71 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
+// Componente del modal de recuperación de contraseña
+const PasswordResetModal = ({ isVisible, onClose, onReset, loading, message, resetEmail, setResetEmail }) => {
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onClose}
+        >
+            <View style={styles.passwordResetModalContainer}>
+                <View style={styles.passwordResetModalCard}>
+                    <Text style={styles.passwordResetTitle}>Restablecer Contraseña</Text>
+                    <Text style={styles.passwordResetText}>
+                        Ingresa tu correo electrónico para recibir un enlace para restablecer tu contraseña.
+                    </Text>
+                    <View style={styles.inputGroup}>
+                        <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icon} />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Correo electrónico"
+                            value={resetEmail}
+                            onChangeText={setResetEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            placeholderTextColor="#a0a0a0"
+                        />
+                    </View>
+                    {message ? <Text style={styles.messageText}>{message}</Text> : null}
+                    <TouchableOpacity style={styles.passwordResetButton} onPress={onReset} disabled={loading}>
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text style={styles.passwordResetButtonText}>Enviar Enlace</Text>
+                        )}
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={onClose} style={{ marginTop: 10 }}>
+                        <Text style={styles.passwordResetCancelText}>Cancelar</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+
 export default function Login({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     
+    // Estados para el Custom Alert
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
+    
+    // Estados para el modal de recuperación de contraseña
+    const [isPasswordResetModalVisible, setIsPasswordResetModalVisible] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetMessage, setResetMessage] = useState('');
+
 
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
         setIsAlertVisible(true);
     };
-
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
@@ -116,6 +171,34 @@ export default function Login({ navigation }) {
         }
     };
 
+    // Función para manejar el restablecimiento de contraseña
+    const handlePasswordReset = async () => {
+        if (!resetEmail.trim()) {
+            setResetMessage('Por favor, ingresa tu correo electrónico.');
+            return;
+        }
+        setResetLoading(true);
+        setResetMessage('');
+
+        try {
+            await sendPasswordResetEmail(auth, resetEmail.trim());
+            setResetMessage('✅ Se ha enviado un correo con un enlace. Revisa tu bandeja de entrada.');
+            setTimeout(() => {
+                setIsPasswordResetModalVisible(false);
+                setResetMessage('');
+            }, 3000);
+        } catch (error) {
+            let errorMessage = "Ocurrió un error. Inténtalo de nuevo más tarde.";
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+                 errorMessage = "La dirección de correo  NO es válida.";
+            }
+            setResetMessage(`❌ Error: ${errorMessage}`);
+        } finally {
+            setResetLoading(false);
+        }
+    };
+    
+
     return (
     <LinearGradient
         colors={['#97c1e6', '#e4eff9']}
@@ -130,6 +213,18 @@ export default function Login({ navigation }) {
             onClose={hideAlert}
             type={alertData.type}
         />
+
+        {/* Nuevo modal de recuperación de contraseña */}
+        <PasswordResetModal
+            isVisible={isPasswordResetModalVisible}
+            onClose={() => { setIsPasswordResetModalVisible(false); setResetMessage(''); }}
+            onReset={handlePasswordReset}
+            loading={resetLoading}
+            message={resetMessage}
+            resetEmail={resetEmail}
+            setResetEmail={setResetEmail}
+        />
+
         <KeyboardAvoidingView
             style={styles.contenedorFondo}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -176,7 +271,7 @@ export default function Login({ navigation }) {
                             <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                         </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={styles.botonOlvido}>
+                    <TouchableOpacity style={styles.botonOlvido} onPress={() => setIsPasswordResetModalVisible(true)}>
                         <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
@@ -295,5 +390,164 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    // Estilos del modal de recuperación de contraseña
+    passwordResetModalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    passwordResetModalCard: {
+        backgroundColor: 'white',
+        borderRadius: 15,
+        padding: 25,
+        width: '85%',
+        maxWidth: 400,
+        alignItems: 'center',
+    },
+    passwordResetTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#007AFF',
+        marginBottom: 15,
+    },
+    passwordResetText: {
+        fontSize: 14,
+        color: '#555',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    messageText: {
+        fontSize: 14,
+        textAlign: 'center',
+        marginBottom: 15,
+        color: '#007AFF' // Color por defecto para mensajes de éxito
+    },
+    inputGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f8ff',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        marginBottom: 15,
+        width: '100%',
+    },
+    icon: { paddingHorizontal: 10 },
+    input: {
+        flex: 1,
+        height: 40,
+        paddingHorizontal: 10,
+        color: '#333',
+    },
+    passwordResetButton: {
+        backgroundColor: '#1E90FF',
+        paddingVertical: 12,
+        borderRadius: 10,
+        width: '100%',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    passwordResetButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    passwordResetCancelText: {
+        color: '#888',
+        textDecorationLine: 'underline',
+        marginTop: 10,
+    },
+    textoRegistroGris: { color: '#555', fontSize: 14 },
+    textoRegistroLinkSinSubrayado: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    contenedorLogo: {
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    bordeLogo: {
+        borderRadius: 15,
+        padding: 5,
+        borderWidth: 3,
+        borderColor: '#fff',
+        backgroundColor: '#007AFF',
+    },
+    logo: { width: 80, height: 80, borderRadius: 10 },
+    nombreApp: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#007AFF',
+        marginTop: 5,
+    },
+    titulo: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#007AFF',
+        marginBottom: 10,
+    },
+    etiqueta: {
+        alignSelf: 'flex-start',
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#007AFF',
+        marginTop: 5,
+        marginBottom: 3,
+        width: '100%',
+    },
+    campoContenedor: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f8ff',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        marginBottom: 10,
+        paddingHorizontal: 10,
+        width: '100%',
+    },
+    icono: { marginRight: 10 },
+    campoEntrada: {
+        height: 40,
+        width: '85%',
+        color: '#333',
+    },
+    botonOlvido: { alignSelf: 'flex-end', marginBottom: 10 },
+    textoOlvido: { color: '#007AFF', fontSize: 13 },
+    botonPrincipal: {
+        backgroundColor: '#1E90FF',
+        paddingVertical: 12,
+        paddingHorizontal: 40,
+        borderRadius: 10,
+        marginTop: 10,
+        width: '100%',
+        alignItems: 'center',
+    },
+    textoBotonPrincipal: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    botonGoogle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderWidth: 2,
+        borderColor: '#007AFF',
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 10,
+        marginTop: 10,
+        width: '100%',
+        justifyContent: 'center',
+    },
+    iconoGoogle: { marginRight: 8 },
+    textoBotonGoogle: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: 'normal',
     },
 });
