@@ -181,11 +181,7 @@ export default function Login({ navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
                         <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.botonGoogle} disabled>
-                        <FontAwesome name="google" size={20} color="#db4437" style={styles.iconoGoogle} />
-                        <Text style={styles.textoBotonGoogle}>Iniciar sesión con Google</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity>                   
                     <View style={styles.contenedorRegistro}>
                         <Text style={styles.textoRegistroGris}>¿No tenes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
@@ -299,24 +295,5 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
-    },
-    botonGoogle: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        borderWidth: 2,
-        borderColor: '#007AFF',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 10,
-        marginTop: 10,
-        width: '100%',
-        justifyContent: 'center',
-    },
-    iconoGoogle: { marginRight: 8 },
-    textoBotonGoogle: {
-        color: '#007AFF',
-        fontSize: 14,
-        fontWeight: 'normal',
     },
 });

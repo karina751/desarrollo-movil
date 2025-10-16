@@ -8,8 +8,8 @@ import {
     ScrollView, 
     Modal, 
     ActivityIndicator,
-    Platform, // Importar Platform para el ajuste de padding
-    StatusBar, // Importar StatusBar para el ajuste de padding
+    Platform,
+    StatusBar,
 } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../src/config/firebaseConfig';
@@ -20,8 +20,8 @@ import { doc, getDoc } from 'firebase/firestore';
 // Componente CustomAlert: Modal de alerta con ícono y color dinámico.
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
-    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136';
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
 
     return (
         <Modal
@@ -109,7 +109,7 @@ export default function Home({ navigation }) {
         try {
             await signOut(auth);
             showAlert("Sesión cerrada", "Has cerrado sesión correctamente.", 'success');
-            navigation.replace('Login');
+            // 🚨 REMOVEMOS la navegación, la pantalla de autenticación se mostrará automáticamente
         } catch (error) {
             console.error("Error al cerrar sesión:", error);
             showAlert("Error", "Hubo un problema al cerrar sesión.");
@@ -184,7 +184,6 @@ export default function Home({ navigation }) {
             )}
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Sección de Bienvenida con gradiente */}
                 <LinearGradient
                     colors={['#007AFF', '#005bb5']}
                     style={styles.welcomeCard}
@@ -197,7 +196,6 @@ export default function Home({ navigation }) {
                     </Text>
                 </LinearGradient>
 
-                {/* Sección de Acceso Rápido */}
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Acceso Rápido</Text>
                     <View style={styles.quickAccessButtonsContainer}>
@@ -212,7 +210,6 @@ export default function Home({ navigation }) {
                     </View>
                 </View>
                 
-                {/* Placeholder para Productos y Servicios Destacados */}
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Productos Destacados</Text>
                     <Text style={styles.placeholderText}>Aquí se mostrarán los productos destacados.</Text>
@@ -222,17 +219,13 @@ export default function Home({ navigation }) {
                     <Text style={styles.placeholderText}>Aquí se mostrarán los servicios ofrecidos.</Text>
                 </View>
 
-                {/* Footer de Información de Contacto */}
                 <View style={styles.infoFooter}>
                     <Text style={styles.infoFooterText}>Barrio/Ciudad del Milagro, Ciudadela, Jujuy Mº37</Text>
                     <Text style={styles.infoFooterText}>Nº de Local: 21</Text>
                     <Text style={styles.infoFooterText}>Cel: 387-5523636</Text>
                 </View>
                 
-                {/* Botón para cerrar la sesión */}
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogOut}>
-                    <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-                </TouchableOpacity>
+                {/* ❌ BOTÓN DE CERRAR SESIÓN ELIMINADO */}
             </ScrollView>
         </View>
     );
@@ -311,6 +304,7 @@ const styles = StyleSheet.create({
         marginTop: 30,
     },
     infoFooterText: { color: '#FFFFFF', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+    // Estilos para el menú desplegable
     profileMenu: {
         position: 'absolute',
         top: 60, // Posiciona el menú debajo del header
