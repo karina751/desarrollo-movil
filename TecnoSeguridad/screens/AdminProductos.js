@@ -11,47 +11,28 @@ import {
     ActivityIndicator,
     Platform,
     StatusBar,
-    
+    Alert, 
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { doc, getDoc, collection, getDocs, deleteDoc } from 'firebase/firestore'; 
+import { doc, getDoc, collection, getDocs, deleteDoc, updateDoc } from 'firebase/firestore'; // Importamos updateDoc
 import { auth, db } from '../src/config/firebaseConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import AgregarProducto from './AgregarProducto'; 
 
 // --- Variables de color ajustadas ---
-const BLUE_COLOR = '#007AFF';
-const RED_COLOR = '#dc3545'; // Rojo más oscuro para acciones destructivas
+const RED_COLOR = '#FF4136';
 const GREEN_COLOR = '#4CAF50';
-const SOFT_RED = '#FF4136';
-
-// 🚨 ESTILOS REUTILIZABLES PARA LOS MODALES
-const modalCommonStyles = StyleSheet.create({
-    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-    alertBox: {
-        width: 300,
-        backgroundColor: 'white',
-        borderRadius: 15,
-        padding: 20,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-    alertTitleBase: { fontSize: 18, fontWeight: 'bold' },
-    alertMessageBase: { fontSize: 15, color: '#555', textAlign: 'center', marginBottom: 20 },
-    alertButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, width: '100%', alignItems: 'center' },
-    alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-});
+const BLUE_COLOR = '#007AFF'; // Color principal
+const YELLOW_COLOR = '#FFC107';
 
 
-// 🚨 1. COMPONENTE CUSTOM ALERT (Para Resultados de Éxito/Error)
-const CustomResultAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
+// ... (CustomAlert y ConfirmationModal permanecen iguales) ...
+
+// 🚨 Componente CustomAlert (AÑADIDO)
+const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? GREEN_COLOR : SOFT_RED;
+    const feedbackColor = isSuccess ? GREEN_COLOR : RED_COLOR;
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
 
     return (
@@ -80,45 +61,26 @@ const CustomResultAlert = ({ isVisible, title, message, onClose, type = 'error' 
     );
 };
 
-
-// 🚨 2. COMPONENTE CONFIRMATION MODAL (Para Reemplazar Alert Nativo)
-const ConfirmationModal = ({ isVisible, onConfirm, onCancel }) => {
-    return (
-        <Modal
-            animationType="fade"
-            transparent={true}
-            visible={isVisible}
-            onRequestClose={onCancel}
-        >
-            <View style={modalCommonStyles.modalContainer}>
-                <View style={[modalCommonStyles.alertBox, { borderColor: RED_COLOR, borderWidth: 2 }]}>
-                    <View style={modalCommonStyles.headerContainer}>
-                         <FontAwesome name="exclamation-circle" size={24} color={RED_COLOR} style={{ marginRight: 10 }} />
-                         <Text style={[modalCommonStyles.alertTitleBase, { color: RED_COLOR }]}>Confirmar Eliminación</Text>
-                    </View>
-                    <Text style={[modalCommonStyles.alertMessageBase, { color: '#333', marginBottom: 30 }]}>
-                        ¿Estás seguro de que deseas eliminar este producto permanentemente?
-                    </Text>
-                    <View style={styles.confirmationButtonContainer}>
-                        <TouchableOpacity 
-                            style={[styles.confirmButton, styles.cancelConfirmButton]} 
-                            onPress={onCancel}
-                        >
-                            <Text style={styles.confirmButtonText}>Cancelar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.confirmButton, styles.deleteConfirmButton]} 
-                            onPress={onConfirm}
-                        >
-                            <Text style={styles.confirmButtonText}>Eliminar</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </View>
-        </Modal>
-    );
-};
-
+const modalCommonStyles = StyleSheet.create({
+    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+    alertBox: {
+        width: 300,
+        backgroundColor: 'white',
+        borderRadius: 15,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    alertTitleBase: { fontSize: 18, fontWeight: 'bold' },
+    alertMessageBase: { fontSize: 15, color: '#555', textAlign: 'center', marginBottom: 20 },
+    alertButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, width: '100%', alignItems: 'center' },
+    alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+});
 
 // Componente CustomHeader (reutilizado)
 const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
@@ -129,7 +91,7 @@ const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
             );
         } else {
             return (
-                <FontAwesome name="user-circle" size={30} color={BLUE_COLOR} />
+                <FontAwesome name="user-circle" size={35} color={BLUE_COLOR} />
             );
         }
     };
@@ -151,9 +113,23 @@ const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
 
 
 // Componente para una tarjeta de producto en modo Admin
-const AdminProductCard = ({ product, onEditPress, onDeletePress }) => {
+const AdminProductCard = ({ product, onEditPress, onDeletePress, onToggleFeatured }) => {
+    const isFeatured = product.isFeatured || false; // Asegurar que el estado exista
     return (
         <View style={styles.productCard}>
+            
+            {/* Botón de Destacado (Flotante) */}
+            <TouchableOpacity 
+                style={styles.featuredButton}
+                onPress={() => onToggleFeatured(product)}
+            >
+                <FontAwesome 
+                    name={isFeatured ? "star" : "star-o"} 
+                    size={20} 
+                    color={isFeatured ? YELLOW_COLOR : '#fff'} 
+                />
+            </TouchableOpacity>
+
             <Image 
                 source={product.image ? { uri: product.image } : { uri: 'https://via.placeholder.com/150/f0f0f0?text=No+Img' }} 
                 style={styles.productImage} 
@@ -184,25 +160,15 @@ export default function AdminProductos({ navigation }) {
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [productToEdit, setProductToEdit] = useState(null); 
 
-    // 🚨 ESTADOS PARA RESULTADO (Éxito/Error)
     const [isResultVisible, setIsResultVisible] = useState(false);
     const [resultData, setResultData] = useState({ title: '', message: '', type: 'error' });
-    
-    // 🚨 ESTADOS PARA CONFIRMACIÓN DE ELIMINACIÓN
-    const [isConfirmVisible, setIsConfirmVisible] = useState(false);
-    const [productIdToDelete, setProductIdToDelete] = useState(null);
-
-
     const showAlert = (title, message, type = 'error') => {
         setResultData({ title, message, type });
         setIsResultVisible(true);
     };
 
-
-    // Función para cargar los datos de productos y perfil
     const fetchData = useCallback(async () => {
-        // console.log("Fetching data...");
-        setIsLoading(true); 
+        setIsLoading(true);
         try {
             // 1. Obtener foto de perfil
             if (auth.currentUser) {
@@ -219,7 +185,8 @@ export default function AdminProductos({ navigation }) {
             const productsList = productsSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                stock: doc.data().stock !== undefined ? doc.data().stock : 'N/A' 
+                stock: doc.data().stock !== undefined ? doc.data().stock : 'N/A',
+                isFeatured: doc.data().isFeatured || false, // 🚨 Obtener el estado destacado
             }));
             setProducts(productsList);
 
@@ -231,59 +198,70 @@ export default function AdminProductos({ navigation }) {
         }
     }, []);
 
-    // 🚨 2. LÓGICA DE ACTUALIZACIÓN AL ENFOCAR LA PANTALLA
     useEffect(() => {
         fetchData(); 
-        // Este listener garantiza que fetchData se llama al volver de cualquier otra pantalla
         const unsubscribe = navigation.addListener('focus', () => {
             fetchData();
         });
-
         return unsubscribe;
     }, [navigation, fetchData]);
 
 
-    // FUNCIÓN DE RECARGA TRAS CUALQUIER ACCIÓN DEL MODAL (Creación/Edición)
-    const handleProductAdded = () => {
-        fetchData(); // Recarga la lista de productos
-    };
-    
-    // FUNCIÓN DE EDICIÓN
     const handleEdit = (product) => {
         setProductToEdit(product);
         setIsAddModalVisible(true);
     };
 
-    // 🚨 FUNCIÓN PARA INICIAR LA CONFIRMACIÓN DE ELIMINACIÓN
-    const handleAttemptDelete = (id) => {
-        setProductIdToDelete(id); // Guarda el ID a eliminar
-        setIsConfirmVisible(true); // Muestra el modal de confirmación
+    const handleDelete = (id) => {
+        Alert.alert(
+            "Confirmar Eliminación",
+            "¿Estás seguro de que deseas eliminar este producto permanentemente?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                { 
+                    text: "Eliminar", 
+                    style: "destructive", 
+                    onPress: async () => {
+                        try {
+                            await deleteDoc(doc(db, 'products', id));
+                            fetchData();
+                            showAlert("Eliminado", "Producto eliminado correctamente.", 'success');
+                        } catch (error) {
+                            console.error("Error al eliminar producto:", error);
+                            showAlert("Error", "No se pudo eliminar el producto. Intente de nuevo.", 'error');
+                        }
+                    }
+                },
+            ]
+        );
     };
-
-    // 🚨 FUNCIÓN PARA EJECUTAR LA ELIMINACIÓN
-    const handleDeleteConfirmed = async () => {
-        setIsConfirmVisible(false); // Cierra el modal de confirmación
-        if (!productIdToDelete) return;
-
+    
+    // 🚨 FUNCIÓN PARA MARCAR/DESMARCAR COMO DESTACADO
+    const handleToggleFeatured = async (product) => {
+        const newFeaturedState = !product.isFeatured;
         try {
-            await deleteDoc(doc(db, 'products', productIdToDelete));
-            fetchData(); // 🚨 RECARGA: Actualiza la lista
-            showAlert("Eliminado", "Producto eliminado correctamente.", 'success'); // CUSTOM ALERT DE ÉXITO
+            const productRef = doc(db, 'products', product.id);
+            await updateDoc(productRef, {
+                isFeatured: newFeaturedState,
+            });
+            fetchData(); // Recarga para actualizar el icono visualmente
+            showAlert(
+                "Actualizado", 
+                newFeaturedState ? "Producto marcado como Destacado." : "Producto desmarcado como Destacado.", 
+                'success'
+            );
         } catch (error) {
-            console.error("Error al eliminar producto:", error);
-            showAlert("Error", "No se pudo eliminar el producto. Intente de nuevo.", 'error'); // CUSTOM ALERT DE ERROR
-        } finally {
-            setProductIdToDelete(null); // Limpia el ID
+            console.error("Error al marcar como destacado:", error);
+            showAlert("Error", "No se pudo actualizar el estado Destacado.", 'error');
         }
     };
 
-    // FUNCIÓN PARA CERRAR EL MODAL Y RESETEAR EL ESTADO DE EDICIÓN
+
     const handleCloseModal = () => {
         setProductToEdit(null);
         setIsAddModalVisible(false);
-        fetchData(); // 🚨 FORCE FETCH al cerrar el modal (prevención)
+        fetchData(); 
     };
-
 
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -301,15 +279,8 @@ export default function AdminProductos({ navigation }) {
 
     return (
         <View style={styles.container}>
-            {/* 🚨 MODAL DE CONFIRMACIÓN */}
-            <ConfirmationModal
-                isVisible={isConfirmVisible}
-                onConfirm={handleDeleteConfirmed}
-                onCancel={() => { setIsConfirmVisible(false); setProductIdToDelete(null); }}
-            />
-            
             {/* MODAL DE RESULTADO (Éxito/Error) */}
-            <CustomResultAlert
+            <CustomAlert
                 isVisible={isResultVisible}
                 title={resultData.title}
                 message={resultData.message}
@@ -325,7 +296,7 @@ export default function AdminProductos({ navigation }) {
                 profileImage={profileImage}
             />
 
-            {/* ... (Barra de Búsqueda y ScrollView) */}
+            {/* Barra de Búsqueda */}
             <View style={styles.searchBarContainer}>
                 <FontAwesome name="search" size={20} color="#888" style={styles.searchIcon} />
                 <TextInput
@@ -336,6 +307,7 @@ export default function AdminProductos({ navigation }) {
                 />
             </View>
 
+            {/* Galería de Productos */}
             <ScrollView contentContainerStyle={styles.productsGrid}>
                 {filteredProducts.length > 0 ? (
                     filteredProducts.map(product => (
@@ -343,7 +315,8 @@ export default function AdminProductos({ navigation }) {
                             key={product.id}
                             product={product}
                             onEditPress={handleEdit} 
-                            onDeletePress={handleAttemptDelete} // 🚨 Llama al nuevo handler de confirmación
+                            onDeletePress={handleDelete} 
+                            onToggleFeatured={handleToggleFeatured} // 🚨 CONECTADO A TOGGLE FEATURED
                         />
                     ))
                 ) : (
@@ -363,7 +336,7 @@ export default function AdminProductos({ navigation }) {
             <AgregarProducto 
                 isVisible={isAddModalVisible} 
                 onClose={handleCloseModal} 
-                onProductAdded={handleProductAdded}
+                onProductAdded={handleCloseModal} 
                 productToEdit={productToEdit} 
             />
         </View>
@@ -376,7 +349,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#f8f8f8',
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
-    // ... (Estilos de loadingContainer, loadingText, header, etc. permanecen iguales)
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -393,7 +365,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingBottom: 8,
+        paddingVertical: 8, // 🚨 REDUCIDO EL PADDING VERTICAL
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
@@ -401,20 +373,20 @@ const styles = StyleSheet.create({
     backButton: {
         padding: 5,
     },
-     backButtonPlaceholder: {
-        width: 15,
+    backButtonPlaceholder: {
+        width: 35, // Ajustado para centrar el título
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 17, // 🚨 REDUCIDO EL TAMAÑO DEL TÍTULO
         fontWeight: 'bold',
         color: BLUE_COLOR,
         flex: 1,
         textAlign: 'center',
     },
     profileImage: {
-        width: 35,
-        height: 35,
-        borderRadius: 17,
+        width: 35, // 🚨 AUMENTADO EL TAMAÑO DE LA FOTO
+        height: 35, 
+        borderRadius: 17.5,
         borderWidth: 1,
         borderColor: BLUE_COLOR,
     },
@@ -461,6 +433,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
         overflow: 'hidden',
+        position: 'relative', // Para que el botón de estrella sea absoluto
     },
     productImage: {
         width: '100%',
@@ -509,10 +482,15 @@ const styles = StyleSheet.create({
         marginHorizontal: 2,
     },
     editButton: {
-        backgroundColor: '#FFC107',
+        backgroundColor: YELLOW_COLOR,
     },
     deleteButton: {
         backgroundColor: RED_COLOR,
+    },
+    actionButtonText: {
+        fontSize: 12,
+        color: '#FFF',
+        fontWeight: '600',
     },
     addButton: {
         position: 'absolute',
@@ -530,35 +508,20 @@ const styles = StyleSheet.create({
         shadowRadius: 5,
         elevation: 5,
     },
+    featuredButton: { // Estilo para el botón de estrella
+        position: 'absolute',
+        top: 5,
+        right: 5,
+        zIndex: 10,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        padding: 5,
+        borderRadius: 15,
+    },
     noProductsText: {
         fontSize: 16,
         color: '#888',
         textAlign: 'center',
         marginTop: 50,
         width: '100%',
-    },
-    // 🚨 ESTILOS DEL MODAL DE CONFIRMACIÓN
-    confirmationButtonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        marginTop: 10,
-    },
-    confirmButton: {
-        paddingVertical: 10,
-        borderRadius: 10,
-        alignItems: 'center',
-        width: '48%',
-    },
-    cancelConfirmButton: {
-        backgroundColor: '#ccc',
-    },
-    deleteConfirmButton: {
-        backgroundColor: RED_COLOR,
-    },
-    confirmButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: 'bold',
     },
 });
