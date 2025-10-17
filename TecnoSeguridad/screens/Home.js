@@ -19,12 +19,19 @@ import { auth, db } from '../src/config/firebaseConfig';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { doc, getDoc } from 'firebase/firestore';
+
+const VOTE_COLOR_A = '#007AFF'; 
+const VOTE_COLOR_B = '#4CAF50'; 
+const RED_COLOR = '#D9534F';
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const ITEM_MARGIN = 15; 
+const NUM_COLUMNS = 1.2; 
+const ITEM_WIDTH = (SCREEN_WIDTH / NUM_COLUMNS) - (ITEM_MARGIN * 2);
 
 // Componente CustomAlert: Modal de alerta con ícono y color dinámico.
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? VOTE_COLOR_B : '#FF4136';
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136';
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
 
     return (
@@ -68,7 +75,7 @@ const customAlertStyles = StyleSheet.create({
         elevation: 5,
     },
     headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-    alertTitleBase: { fontSize: 18, fontWeight: 'bold', color: VOTE_COLOR_A },
+    alertTitleBase: { fontSize: 18, fontWeight: 'bold', color: '#007AFF'},
     alertMessageBase: { fontSize: 15, color: '#555', textAlign: 'center', marginBottom: 20 },
     alertButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, width: '100%', alignItems: 'center' },
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
@@ -81,6 +88,7 @@ export default function Home({ navigation }) {
     const [userName, setUserName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuVisible, setIsMenuVisible] = useState(false);
+    const [featuredProducts, setFeaturedProducts] = useState([]);
 
     useEffect(() => {
         const fetchUserData = async () => {
