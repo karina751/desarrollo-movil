@@ -16,10 +16,10 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../src/config/firebaseConfig';
+import { signOut } from 'firebase/auth'; 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
-// Componente CustomAlert (asumo que está definido en otro archivo)
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
@@ -35,8 +35,8 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             <View style={customAlertStyles.modalContainer}>
                 <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
                     <View style={customAlertStyles.headerContainer}>
-                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
-                         <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
+                           <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                           <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
                     </View>
                     <Text style={customAlertStyles.alertMessageBase}>{message}</Text>
                     <TouchableOpacity 
@@ -72,7 +72,7 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// Componente CustomHeader (reutilizado)
+// Componente CustomHeader 
 const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfilePress, profileImage }) => {
     const renderProfileAvatar = () => {
         if (profileImage) {
@@ -80,8 +80,8 @@ const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfil
                 <Image source={{ uri: profileImage }} style={styles.profileImage} />
             );
         } else {
-            return (
-                <FontAwesome name="user-circle" size={45} color="#007AFF" /> // Usamos el tamaño del style.profileImage
+            return ( 
+                <FontAwesome name="user-circle" size={35} color="#007AFF" /> 
             );
         }
     };
@@ -96,14 +96,14 @@ const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfil
             
             <Text style={styles.headerTitle}>{title}</Text>
 
-            <TouchableOpacity onPress={onProfilePress}>
+            {/* BOTÓN QUE ACTIVA EL MENÚ DESPLEGABLE */}
+            <TouchableOpacity onPress={onProfilePress} style={{ padding: 5 }}>
                 {renderProfileAvatar()}
             </TouchableOpacity>
         </View>
     );
 };
 
-// Componente para una tarjeta de producto
 const ProductCard = ({ product, onVerMasPress, onAgregarPress }) => {
     return (
         <View style={styles.productCard}>
@@ -133,10 +133,12 @@ const ProductCard = ({ product, onVerMasPress, onAgregarPress }) => {
 export default function Productos({ navigation }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [profileImage, setProfileImage] = useState(null);
+    const [userName, setUserName] = useState(''); 
+    const [isMenuVisible, setIsMenuVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [products, setProducts] = useState([]); 
     
-    // Estados para alertas (Aunque no se usan activamente en esta vista, se mantienen por consistencia)
+    // Estados para alertas 
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
     const showAlert = (title, message, type = 'error') => {
@@ -147,21 +149,36 @@ export default function Productos({ navigation }) {
         setIsAlertVisible(false);
     };
 
+    // ----------------------------------------------------
+    // FUNCIÓN PARA CERRAR SESIÓN
+    const handleLogOut = async () => {
+        try {
+            await signOut(auth);
+            setIsMenuVisible(false); 
+            showAlert("Sesión cerrada", "Has cerrado sesión correctamente.", 'success');
+        } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            showAlert("Error", "Hubo un problema al cerrar sesión.");
+        }
+    };
+    // ----------------------------------------------------
 
-    // 🚨 FUNCIÓN DE CARGA DE DATOS (Memoizada)
+    // FUNCIÓN DE CARGA DE DATOS 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            // 1. Obtener foto de perfil
+            // 1. Obtener datos de usuario
             if (auth.currentUser) {
                 const userRef = doc(db, 'users', auth.currentUser.uid);
                 const docSnap = await getDoc(userRef);
                 if (docSnap.exists()) {
-                    setProfileImage(docSnap.data().profileImage || null);
+                    const userData = docSnap.data();
+                    setProfileImage(userData.profileImage || null);
+                    setUserName(userData.firstName + ' ' + userData.lastName); // 👈 OBTENER NOMBRE
                 }
             }
 
-            // 2. Obtener productos de Firestore
+            // 2. Obtener productos de Firestore 
             const productsCollection = collection(db, 'products'); 
             const productsSnapshot = await getDocs(productsCollection);
             const productsList = productsSnapshot.docs.map(doc => ({
@@ -177,7 +194,6 @@ export default function Productos({ navigation }) {
         }
     }, []);
 
-    // 🚨 LÓGICA DE ACTUALIZACIÓN AL ENFOCAR LA PANTALLA
     useEffect(() => {
         fetchData(); 
         const unsubscribe = navigation.addListener('focus', () => {
@@ -187,7 +203,6 @@ export default function Productos({ navigation }) {
     }, [navigation, fetchData]);
 
 
-    // Filtra los productos basados en el texto de búsqueda
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -211,16 +226,37 @@ export default function Productos({ navigation }) {
                 onClose={hideAlert}
                 type={alertData.type}
             />
+            
             <View style={styles.container}>
+                
                 <CustomHeader
                     navigation={navigation}
                     title="Productos"
                     showBackButton={true}
                     onBackPress={() => navigation.goBack()}
-                    showProfileButton={true}
                     profileImage={profileImage}
-                    onProfilePress={() => navigation.navigate('Perfil')} 
+                    onProfilePress={() => setIsMenuVisible(!isMenuVisible)} // 👈 Alterna el menú
                 />
+                
+                {isMenuVisible && (
+                    <View style={styles.profileMenu}>
+                        <View style={styles.menuHeader}>
+                            <Text style={styles.menuName}>{userName}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.menuItem} onPress={() => {
+                            setIsMenuVisible(false);
+                            navigation.navigate('Perfil');
+                        }}>
+                            <FontAwesome name="user" size={20} color="#007AFF" style={{ marginRight: 10 }} />
+                            <Text style={styles.menuText}>Mi Perfil</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogOut}>
+                            <FontAwesome name="sign-out" size={20} color="#FFF" style={{ marginRight: 10 }} />
+                            <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 <View style={styles.searchBarContainer}>
                     <FontAwesome name="search" size={20} color="#888" style={styles.searchIcon} />
                     <TextInput
@@ -230,6 +266,7 @@ export default function Productos({ navigation }) {
                         onChangeText={setSearchQuery}
                     />
                 </View>
+
                 <ScrollView contentContainerStyle={styles.productsGrid}>
                     {filteredProducts.length > 0 ? (
                         filteredProducts.map(product => (
@@ -256,17 +293,17 @@ export default function Productos({ navigation }) {
     );
 }
 
+// ---------------------------------------------------------------------------------------------------
+// 3. Estilos Adicionales 
+// ---------------------------------------------------------------------------------------------------
 const styles = StyleSheet.create({
     safeArea: { 
         flex: 1, 
         backgroundColor: '#f8f8f8',
-        // Esto soluciona la superposición de iOS.
-        // En Android, el padding se aplica en el header.
     },
     container: {
         flex: 1,
         backgroundColor: '#f8f8f8',
-        // 🚨 SOLUCIÓN PARA EVITAR SUPERPOSICIÓN DE NOTIFICACIONES EN ANDROID
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     loadingContainer: {
@@ -289,12 +326,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
+        zIndex: 10, 
     },
     backButton: {
         padding: 5,
     },
     backButtonPlaceholder: {
-        width: 30,
+        width: 35,
     },
     headerTitle: {
         fontSize: 17, 
@@ -418,6 +456,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginTop: 20,
         marginBottom: 10,
+        marginHorizontal: 15,
         shadowColor: '#007AFF',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -435,5 +474,57 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 50,
         width: '100%',
+    },
+    // ESTILOS DEL MENÚ DESPLEGABLE
+    profileMenu: {
+        position: 'absolute',
+        top: Platform.OS === 'android' ? StatusBar.currentHeight + 50 : 80, // Ajustar posición
+        right: 15,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        width: 200,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 100,
+        padding: 10,
+    },
+    menuHeader: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        paddingBottom: 10,
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    menuName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#007AFF',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+    },
+    menuText: {
+        fontSize: 14,
+        color: '#333',
+    },
+    logoutButton: {
+        backgroundColor: '#dc3545',
+        borderRadius: 5,
+        paddingVertical: 10,
+        marginTop: 10,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    logoutButtonText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
 });
