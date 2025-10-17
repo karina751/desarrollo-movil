@@ -1,70 +1,107 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { onAuthStateChanged } from 'firebase/auth'; 
 import { auth } from '../src/config/firebaseConfig'; 
-// Puedes importar un componente para mostrar una pantalla de carga básica
 import { View, ActivityIndicator, StyleSheet } from 'react-native'; 
+import { FontAwesome } from '@expo/vector-icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+// Importaciones de tus pantallas
 import Login from '../screens/Login';
 import SignUp from '../screens/SignUp';
 import Home from '../screens/Home';
+import Perfil from '../screens/Perfil';
+import Productos from '../screens/Productos';
+import Servicios from '../screens/Servicios';
+import AdminProductos from '../screens/AdminProductos';
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
-// Componente simple de carga (opcional, puedes usar null)
-const LoadingScreen = () => (
-    <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-    </View>
-);
+function LoadingScreen() {
+    return (
+        <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" /> 
+        </View>
+    );
+}
 
-function Navigation() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Nuevo estado de carga
+// Contenedor de pestañas inferiores para pantallas autenticadas
+function HomeTabs() { // ❌ NOTA: No lleva 'export default'
+    return (
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarIcon: ({ color, size }) => {
+                    let iconName;
+                    if (route.name === 'Home') {
+                        iconName = 'home';
+                    } else if (route.name === 'Productos') {
+                        iconName = 'cube';
+                    } else if (route.name === 'Servicios') {
+                        iconName = 'wrench';
+                    } else if (route.name === 'Perfil') {
+                        iconName = 'user';
+                    }
+                    return <FontAwesome name={iconName} size={size} color={color} />;
+                },
+                tabBarActiveTintColor: '#007AFF',
+                tabBarInactiveTintColor: 'gray',
+            })}
+        >
+            <Tab.Screen name="Home" component={Home} />
+            <Tab.Screen name="Productos" component={Productos} />
+            <Tab.Screen name="Servicios" component={Servicios} />
+            <Tab.Screen name="Perfil" component={Perfil} />
+        </Tab.Navigator>
+    );
+}
 
-  useEffect(() => {
-    // onAuthStateChanged se dispara inmediatamente con el estado actual
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      if (user) {
-        setIsAuthenticated(true); 
-      } else {
-        setIsAuthenticated(false); 
-      }
-      setIsLoading(false); // Una vez que sabemos el estado, desactivamos la carga
-    });
+// Navegador principal que gestiona el flujo de autenticación
+export default function Navigation() { // ✅ Única exportación por defecto
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    return () => unsubscribe();
-  }, []);
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setIsAuthenticated(!!user);
+            setIsLoading(false);
+        });
+        return unsubscribe;
+    }, []);
 
-  // 1. Mostrar la pantalla de carga si aún no se ha verificado el estado de Firebase
-  if (isLoading) {
-      return <LoadingScreen />; 
-  }
+    if (isLoading) {
+        return <LoadingScreen />; 
+    }
 
-  // 2. Ocultar el header en todas las pantallas con 'screenOptions'
-  return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName={isAuthenticated ? "Home" : "Login"}
-        screenOptions={{ 
-          headerShown: false // Oculta la barra de navegación para TODAS las pantallas
-        }}
-      >
-        <Stack.Screen name="Login" component={Login} />
-        <Stack.Screen name="SignUp" component={SignUp} />
-        <Stack.Screen name="Home" component={Home} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
+    return (
+        <SafeAreaProvider>
+            <NavigationContainer>
+                <Stack.Navigator screenOptions={{ headerShown: false }}>
+                    {isAuthenticated ? (
+                        <>
+                            <Stack.Screen name="HomeTabs" component={HomeTabs} />
+                            <Stack.Screen name="AdminProductos" component={AdminProductos} />
+                        </>
+                    ) : (
+                        <>
+                            <Stack.Screen name="Login" component={Login} />
+                            <Stack.Screen name="SignUp" component={SignUp} />
+                        </>
+                    )}
+                </Stack.Navigator>
+            </NavigationContainer>
+        </SafeAreaProvider>
+    );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: '#f8f8f8',
     },
 });
-
-export default Navigation;
