@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, 
     Text, 
@@ -7,13 +7,16 @@ import {
     Image, 
     TouchableOpacity, 
     Platform, 
-    StatusBar 
+    StatusBar,
+    ActivityIndicator,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// 🚨 IMPORTACIONES DE FIREBASE
+import { doc, getDoc } from 'firebase/firestore'; 
+import { auth, db } from '../src/config/firebaseConfig'; 
 
-// 🚨 IMPORTACIÓN DE IMÁGENES LOCALES (Mantenemos la ruta verificada)
 const IMG_CAMARAS = require('../assets/camaras_seguridad.png.jpeg'); 
 const IMG_PRODUCTOS = require('../assets/venta_productos.png.jpeg'); 
 const IMG_REPARACION = require('../assets/reparacion_pc.png.jpeg'); 
@@ -42,6 +45,38 @@ const FIXED_SERVICES = [
     },
 ];
 
+
+// Componente CustomHeader 
+const CustomHeader = ({ navigation, title, profileImage }) => {
+    // 🚨 Renderiza la imagen cargada o el ícono grande
+    const renderProfileAvatar = () => {
+        if (profileImage) {
+            return (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            );
+        } else {
+            // Ícono de usuario de 35px si no hay imagen
+            return <FontAwesome name="user-circle" size={35} color={BLUE_COLOR} />; 
+        }
+    };
+
+    return (
+        <View style={styles.header}>
+            {/* Botón de volver (Home es el inicio, así que volvemos atrás en el stack) */}
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <FontAwesome name="chevron-left" size={24} color={BLUE_COLOR} />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>{title}</Text>
+
+            <TouchableOpacity onPress={() => navigation.navigate('Perfil')} style={styles.profileButton}>
+                {renderProfileAvatar()}
+            </TouchableOpacity>
+        </View>
+    );
+};
+
+
 // Componente para mostrar una tarjeta de servicio
 const ServiceCard = ({ service }) => {
     return (
@@ -58,34 +93,48 @@ const ServiceCard = ({ service }) => {
     );
 };
 
-// Componente CustomHeader 
-const CustomHeader = ({ navigation, title }) => {
-    const insets = useSafeAreaInsets();
-    
-    const renderProfileAvatar = () => {
-        return <FontAwesome name="user-circle" size={30} color={BLUE_COLOR} />;
-    };
-
-    return (
-        <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : insets.top + 10 }]}>
-            <View style={styles.backButtonPlaceholder} /> 
-            
-            <Text style={styles.headerTitle}>{title}</Text>
-
-            <TouchableOpacity onPress={() => navigation.navigate('Perfil')} style={styles.profileButton}>
-                {renderProfileAvatar()}
-            </TouchableOpacity>
-        </View>
-    );
-};
-
 
 export default function Servicios({ navigation }) {
+    const [profileImage, setProfileImage] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // 🚨 LÓGICA PARA CARGAR LA IMAGEN DE PERFIL
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (auth.currentUser) {
+                try {
+                    const userRef = doc(db, 'users', auth.currentUser.uid);
+                    const docSnap = await getDoc(userRef);
+    
+                    if (docSnap.exists()) {
+                        const userData = docSnap.data();
+                        setProfileImage(userData.profileImage || null);
+                    }
+                } catch (error) {
+                    console.error("Error cargando imagen de perfil:", error);
+                }
+            }
+            setIsLoading(false);
+        };
+        fetchUserData();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={BLUE_COLOR} />
+                <Text style={styles.loadingText}>Cargando servicios...</Text>
+            </View>
+        );
+    }
+
+
     return (
         <View style={styles.container}>
             <CustomHeader
                 navigation={navigation}
                 title="Nuestros Servicios"
+                profileImage={profileImage} // 🚨 Pasamos la imagen al header
             />
             
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -109,29 +158,55 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f0f4f7', 
+        // 🚨 SOLUCIÓN PARA EVITAR SUPERPOSICIÓN DE NOTIFICACIONES EN ANDROID
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, 
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f0f4f7',
+    },
+    loadingText: {
+        fontSize: 16,
+        color: BLUE_COLOR,
+        marginTop: 10,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingBottom: 8,
+        paddingVertical: 5, // 🚨 REDUCIDO EL PADDING VERTICAL
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 17, // 🚨 REDUCIDO TAMAÑO DEL TÍTULO
         fontWeight: 'bold',
         color: BLUE_COLOR,
         flex: 1,
         textAlign: 'center',
     },
+    backButton: {
+        padding: 5,
+        width: 35, // Para mantener el espacio
+    },
     profileButton: {
         padding: 5,
+        width: 35, // Para mantener el espacio
+        alignItems: 'flex-end',
+    },
+    profileImage: {
+        width: 35, // 🚨 TAMAÑO DE LA IMAGEN DE PERFIL
+        height: 35, 
+        borderRadius: 17.5,
+        borderWidth: 1,
+        borderColor: BLUE_COLOR,
     },
     backButtonPlaceholder: { 
-        width: 35,
+        width: 35, // Ajustamos el ancho para alineación
     },
     scrollContent: {
         padding: 20,
@@ -183,14 +258,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 5,
     },
-    // 🚨 AJUSTE DE MARGEN INFERIOR: Aumentamos el margen ya que el botón no está.
     cardDescription: {
         fontSize: 14,
         color: '#666',
         textAlign: 'center',
-        marginBottom: 20, // Más espacio al final de la descripción
+        marginBottom: 20,
     },
-    // ❌ ESTILOS DEL BOTÓN ELIMINADOS
     footerText: {
         fontSize: 14,
         color: '#888',
