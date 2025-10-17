@@ -14,15 +14,14 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../src/config/firebaseConfig';
+import { signOut } from 'firebase/auth'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 
-// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
-    // Definir colores e íconos para retroalimentación
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
-    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; 
 
     return (
         <Modal
@@ -34,8 +33,8 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             <View style={customAlertStyles.modalContainer}>
                 <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
                     <View style={customAlertStyles.headerContainer}>
-                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
-                         <Text style={[customAlertStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
+                           <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                           <Text style={[customAlertStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
                     </View>
                     <Text style={[customAlertStyles.alertMessageBase, { color: feedbackColor }]}>{message}</Text>
                     <TouchableOpacity 
@@ -91,7 +90,6 @@ export default function Perfil() {
         setIsAlertVisible(false);
     };
 
-    // Al cargar la pantalla, obtenemos los datos del usuario desde Firestore.
     useEffect(() => {
         const fetchUserData = async () => {
             if (auth.currentUser) {
@@ -111,6 +109,20 @@ export default function Perfil() {
         fetchUserData();
     }, []);
 
+    // **Lógica de Cerrar Sesión**
+    const handleSignOut = async () => {
+        setIsSaving(true); 
+        try {
+            await signOut(auth);
+            showAlert('Sesión Cerrada', 'Has cerrado tu sesión con éxito.', 'success');
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+            showAlert('Error de Sesión', 'No se pudo cerrar la sesión correctamente.');
+        } finally {
+        }
+    };
+    
+
     // 1. Lógica para seleccionar y subir una imagen de perfil
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -121,13 +133,12 @@ export default function Perfil() {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true, // Permitimos que el usuario edite la imagen.
-            aspect: [1, 1], // Forzamos un formato cuadrado (1:1).
+            allowsEditing: true, 
+            aspect: [1, 1], 
             quality: 1,
         });
 
         if (!result.canceled) {
-            // Guardamos la URL local de la imagen en Firestore.
             saveLocalImageUri(result.assets[0].uri);
         }
     };
@@ -236,6 +247,7 @@ export default function Perfil() {
                         />
                     </View>
 
+                    {/* Botón Guardar Cambios */}
                     <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges} disabled={isSaving}>
                         {isSaving ? (
                             <ActivityIndicator color="white" />
@@ -243,6 +255,17 @@ export default function Perfil() {
                             <Text style={styles.saveButtonText}>Guardar Cambios</Text>
                         )}
                     </TouchableOpacity>
+
+                    {/* Botón Cerrar Sesión */}
+                    <TouchableOpacity 
+                        style={styles.signOutButton} 
+                        onPress={handleSignOut}
+                        disabled={isSaving} 
+                    >
+                        <FontAwesome name="sign-out" size={20} color="#FF4136" style={{ marginRight: 10 }} />
+                        <Text style={styles.signOutButtonText}>Cerrar Sesión</Text>
+                    </TouchableOpacity>
+
                 </View>
             </ScrollView>
         </LinearGradient>
@@ -313,4 +336,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    
+    // ESTILOS PARA EL BOTÓN CERRAR SESIÓN
+    signOutButton: {
+        marginTop: 20, 
+        paddingVertical: 14,
+        paddingHorizontal: 30,
+        borderRadius: 10,
+        width: '100%',
+        alignItems: 'center',
+        flexDirection: 'row', 
+        justifyContent: 'center',
+        backgroundColor: '#FF4136', 
+        borderWidth: 1,
+        borderColor: '#FF4136', 
+    },
+    signOutButtonText: {
+        color: '#FFFFFF', 
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
 });
