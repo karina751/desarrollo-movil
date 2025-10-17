@@ -42,3 +42,5 @@ yarn-error.*
 
 # Archivos de configuración que contienen secretos
 .env
+# Archivo de Lock de Yarn (usamos npm)
+yarn.lock

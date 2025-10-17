@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginBottom: 15,
-        color: '#007AFF' // Color por defecto para mensajes de éxito
+        color: '#007AFF' 
     },
     inputGroup: {
         flexDirection: 'row',

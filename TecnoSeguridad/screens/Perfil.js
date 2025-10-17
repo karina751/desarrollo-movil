@@ -17,12 +17,12 @@ import { auth, db } from '../src/config/firebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 
-// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
+// Componente CustomAlert: Modal de alerta con ícono y color.
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     // Definir colores e íconos para retroalimentación
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
-    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; 
 
     return (
         <Modal
