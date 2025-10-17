@@ -220,7 +220,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
         if (!results) return null;
 
         if (isDualOption) {
-            // 🚨 OPCIÓN 1: BARRA SEGMENTADA (Para 2 opciones)
+            //  OPCIÓN 1: BARRA SEGMENTADA (Para 2 opciones)
             const resultA = results.formattedResults[0];
             const resultB = results.formattedResults[1];
 
@@ -455,6 +455,7 @@ export default function Home({ navigation }) {
         try {
             await signOut(auth);
             showAlert("Sesión cerrada", "Has cerrado sesión correctamente.", 'success');
+
         } catch (error) {
             console.error("Error al cerrar sesión:", error);
             showAlert("Error", "Hubo un problema al cerrar sesión.");
@@ -561,7 +562,7 @@ export default function Home({ navigation }) {
                     </View>
                 </View>
                 
-                {/* 🚨 SECCIÓN DE PRODUCTOS DESTACADOS (CARRUSEL) */}
+                {/*  SECCIÓN DE PRODUCTOS DESTACADOS (CARRUSEL) */}
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>{featuredTitle}</Text> 
                     {loopedProducts.length > 0 ? (
@@ -604,7 +605,7 @@ export default function Home({ navigation }) {
                         showAlert={showAlert} 
                     />
 
-                    {/* 🚨 ENCUESTA 2: TEAM OS (Barra Segmentada) */}
+                    {/*  ENCUESTA 2: TEAM OS (Barra Segmentada) */}
                     <InteractiveSurvey 
                         surveyId="os_team"
                         question="¿Usas Windows o Linux?"
@@ -614,7 +615,7 @@ export default function Home({ navigation }) {
                         ]}
                         showAlert={showAlert} 
                     />
-                     {/* 🚨 ENCUESTA 3: COMPONENTE VITAL (Tiles de Porcentaje) */}
+                     {/*  ENCUESTA 3: COMPONENTE VITAL (Tiles de Porcentaje) */}
                     <InteractiveSurvey 
                         surveyId="main_component"
                         question="¿Cuál es el componente más vital de tu PC?"
@@ -819,7 +820,7 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 5,
     },
-    // 🚨 ESTILOS DEL MENÚ DESPLEGABLE (Restaurados)
+    //  ESTILOS DEL MENÚ DESPLEGABLE 
     profileMenu: {
         position: 'absolute',
         top: 60, 
@@ -871,7 +872,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
     },
-    // 🚨 ESTILOS PARA BARRA SEGMENTADA (2 OPCIONES)
+    //  ESTILOS PARA BARRA SEGMENTADA (2 OPCIONES)
     segmentedBarContainer: {
         flexDirection: 'row',
         width: '100%',
@@ -894,7 +895,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
     },
-    // 🚨 ESTILOS PARA TILES (3+ OPCIONES)
+    //  ESTILOS PARA TILES (3+ OPCIONES)
     tileResultsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
