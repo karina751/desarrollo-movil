@@ -23,11 +23,10 @@ import AgregarProducto from './AgregarProducto';
 // --- Variables de colores ---
 const RED_COLOR = '#FF4136';
 const GREEN_COLOR = '#4CAF50';
-const BLUE_COLOR = '#007AFF';
+const BLUE_COLOR = '#007AFF'; // Color principal
 const YELLOW_COLOR = '#FFC107';
 
-
-//  Componente CustomAlert 
+// Componente CustomAlert
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? GREEN_COLOR : RED_COLOR;
@@ -80,7 +79,7 @@ const modalCommonStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// Componente CustomHeader 
+// Componente CustomHeader
 const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
     const renderProfileAvatar = () => {
         if (profileImage) {
@@ -116,7 +115,7 @@ const AdminProductCard = ({ product, onEditPress, onDeletePress, onToggleFeature
     return (
         <View style={styles.productCard}>
             
-            {/* Botón de Destacado */}
+            {/* Botón de Destacado (Flotante) */}
             <TouchableOpacity 
                 style={styles.featuredButton}
                 onPress={() => onToggleFeatured(product)}
@@ -184,7 +183,7 @@ export default function AdminProductos({ navigation }) {
                 id: doc.id,
                 ...doc.data(),
                 stock: doc.data().stock !== undefined ? doc.data().stock : 'N/A',
-                isFeatured: doc.data().isFeatured || false, 
+                isFeatured: doc.data().isFeatured || false, // Obtener el estado destacado
             }));
             setProducts(productsList);
 
@@ -242,7 +241,7 @@ export default function AdminProductos({ navigation }) {
             await updateDoc(productRef, {
                 isFeatured: newFeaturedState,
             });
-            fetchData(); 
+            fetchData(); // Recarga para actualizar el icono visualmente
             showAlert(
                 "Actualizado", 
                 newFeaturedState ? "Producto marcado como Destacado." : "Producto desmarcado como Destacado.", 
@@ -363,7 +362,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingVertical: 8, 
+        paddingVertical: 8, // REDUCIDO EL PADDING VERTICAL
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
@@ -372,17 +371,17 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     backButtonPlaceholder: {
-        width: 35, 
+        width: 35, // Centrar el título
     },
     headerTitle: {
-        fontSize: 17, 
+        fontSize: 17, // REDUCIDO EL TAMAÑO DEL TÍTULO
         fontWeight: 'bold',
         color: BLUE_COLOR,
         flex: 1,
         textAlign: 'center',
     },
     profileImage: {
-        width: 35, 
+        width: 35, // AUMENTADO EL TAMAÑO DE LA FOTO
         height: 35, 
         borderRadius: 17.5,
         borderWidth: 1,
@@ -418,7 +417,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         paddingHorizontal: 15,
-        paddingBottom: 80,
+        paddingBottom: 80, // Espacio para el botón flotante
     },
     productCard: {
         width: '48%',
@@ -431,7 +430,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
         overflow: 'hidden',
-        position: 'relative', 
+        position: 'relative', // Para que el botón de estrella sea absoluto
     },
     productImage: {
         width: '100%',

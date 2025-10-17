@@ -13,6 +13,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 // IMPORTACIONES DE FIREBASE
 import { doc, getDoc } from 'firebase/firestore'; 
 import { auth, db } from '../src/config/firebaseConfig'; 
@@ -48,7 +49,8 @@ const FIXED_SERVICES = [
 
 // Componente CustomHeader 
 const CustomHeader = ({ navigation, title, profileImage }) => {
-    const renderProfileAvatar = () => {
+
+   const renderProfileAvatar = () => {
         if (profileImage) {
             return (
                 <Image source={{ uri: profileImage }} style={styles.profileImage} />
@@ -62,6 +64,7 @@ const CustomHeader = ({ navigation, title, profileImage }) => {
     return (
         <View style={styles.header}>
             {/* Botón de volver */}
+
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                 <FontAwesome name="chevron-left" size={24} color={BLUE_COLOR} />
             </TouchableOpacity>
@@ -133,6 +136,7 @@ export default function Servicios({ navigation }) {
             <CustomHeader
                 navigation={navigation}
                 title="Nuestros Servicios"
+
                 profileImage={profileImage} 
             />
             
@@ -157,6 +161,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f0f4f7', 
+
         // EVITAR SUPERPOSICIÓN DE NOTIFICACIONES EN ANDROID
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, 
     },
@@ -176,12 +181,14 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 15,
+
         paddingVertical: 5,
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
     headerTitle: {
+
         fontSize: 17,
         fontWeight: 'bold',
         color: BLUE_COLOR,
@@ -190,6 +197,7 @@ const styles = StyleSheet.create({
     },
     backButton: {
         padding: 5,
+
         width: 35,
     },
     profileButton: {

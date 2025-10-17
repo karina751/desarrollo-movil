@@ -19,7 +19,8 @@ import { auth, db } from '../src/config/firebaseConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
-// Componente CustomAlert 
+
+// Componente CustomAlert (asumo que está definido en otro archivo)
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
@@ -82,6 +83,7 @@ const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfil
         } else {
             return (
                 <FontAwesome name="user-circle" size={45} color="#007AFF" /> 
+
             );
         }
     };
@@ -136,6 +138,7 @@ export default function Productos({ navigation }) {
     const [isLoading, setIsLoading] = useState(true);
     const [products, setProducts] = useState([]); 
     
+
     // Estados para alertas 
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
@@ -146,7 +149,6 @@ export default function Productos({ navigation }) {
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
-
 
     // FUNCIÓN DE CARGA DE DATOS 
     const fetchData = useCallback(async () => {
@@ -260,13 +262,13 @@ const styles = StyleSheet.create({
     safeArea: { 
         flex: 1, 
         backgroundColor: '#f8f8f8',
-        
     },
     container: {
         flex: 1,
         backgroundColor: '#f8f8f8',
+
         // SOLUCIÓN PARA EVITAR SUPERPOSICIÓN DE NOTIFICACIONES EN ANDROID
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+ight : 0,
     },
     loadingContainer: {
         flex: 1,

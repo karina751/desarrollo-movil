@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect } from 'react';
 import { 
     View, 
     Text, 
@@ -19,11 +19,10 @@ import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig'; 
 import { LinearGradient } from 'expo-linear-gradient'; 
 
-// --- Variables de colores ---
+// Variables de colores
 const BLUE_COLOR_SOFT = '#1E90FF';
 const RED_COLOR = '#FF4136';
 const GREEN_COLOR = '#4CAF50';
-
 
 // Componente CustomAlert 
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
@@ -78,14 +77,13 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-
 export default function AgregarProducto({ isVisible, onClose, onProductAdded, productToEdit }) {
-    const [id, setId] = useState(null); 
+    const [id, setId] = useState(null); // ID del producto si estamos editando
     const [productName, setProductName] = useState('');
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState('');
     const [stock, setStock] = useState('');
-    const [imageURL, setImageURL] = useState(''); 
+    const [imageURL, setImageURL] = useState(''); // Estado para la URL de la imagen
     const [isSaving, setIsSaving] = useState(false); 
 
     const [alertVisible, setAlertVisible] = useState(false);
@@ -93,7 +91,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState('error');
 
-    // EFECTO PARA CARGAR DATOS DE EDICIÓN
+    // CARGAR DATOS DE EDICIÓN
     useEffect(() => {
         if (productToEdit) {
             setId(productToEdit.id);
@@ -102,9 +100,9 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
             // Aseguramos que el valor sea un string
             setPrice(String(productToEdit.price)); 
             setStock(String(productToEdit.stock)); 
-            setImageURL(productToEdit.image); // ⬅️ Carga la URL
+            setImageURL(productToEdit.image); // Carga la URL
         } else {
-            // Modo Creación (Reset)
+            // Modo Creación 
             setId(null);
             setProductName('');
             setCategory('');
