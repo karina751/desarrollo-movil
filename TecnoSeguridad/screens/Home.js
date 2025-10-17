@@ -29,8 +29,8 @@ const SNAP_WIDTH = ITEM_WIDTH + ITEM_MARGIN; // Ancho total de desplazamiento
 // --- Variables de color ajustadas ---
 const VOTE_COLOR_A = '#007AFF';
 const VOTE_COLOR_B = '#4CAF50';
-const USER_VOTE_COLOR = '#FFC107'; // Color para resaltar la opción votada por el usuario
-
+const USER_VOTE_COLOR = '#FFC107'; // Amarillo para resaltar la opción votada por el usuario
+const RED_COLOR = '#dc3545'; // Rojo para cerrar sesión/error
 
 // Componente CustomAlert (Reutilizado)
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
@@ -105,12 +105,14 @@ const FeaturedProductItem = memo(({ item, navigation }) => (
 
 
 // 🚨 NUEVO COMPONENTE: TARJETA DE RESULTADOS DE ENCUESTA
-const InteractiveSurvey = ({ surveyId, question, optionA, optionB, showAlert }) => {
+const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
     const [userVotedOption, setUserVotedOption] = useState(null);
     const [results, setResults] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const userId = auth.currentUser ? auth.currentUser.uid : 'guest';
+    const isDualOption = options.length === 2; // Bandera para el diseño de 2 opciones
+
 
     const fetchResults = useCallback(async (id) => {
         try {
@@ -118,34 +120,35 @@ const InteractiveSurvey = ({ surveyId, question, optionA, optionB, showAlert }) 
             const allVotesQuery = query(responsesRef, where('survey_id', '==', id));
             const allVotesSnapshot = await getDocs(allVotesQuery);
 
-            let countA = 0;
-            let countB = 0;
             const totalVotes = allVotesSnapshot.docs.length;
+            const voteCounts = {}; 
 
+            options.forEach(opt => voteCounts[opt.name] = 0); 
             allVotesSnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.voted_option === optionA) {
-                    countA++;
-                } else if (data.voted_option === optionB) {
-                    countB++;
+                const votedOption = data.voted_option;
+                if (votedOption && voteCounts.hasOwnProperty(votedOption)) {
+                    voteCounts[votedOption]++;
                 }
             });
 
-            const percentA = totalVotes > 0 ? ((countA / totalVotes) * 100).toFixed(0) : 0;
-            const percentB = totalVotes > 0 ? ((countB / totalVotes) * 100).toFixed(0) : 0;
+            // 2. Calcular porcentajes y formatear resultados
+            const formattedResults = options.map(opt => ({
+                name: opt.name,
+                color: opt.color,
+                count: voteCounts[opt.name],
+                percent: totalVotes > 0 ? ((voteCounts[opt.name] / totalVotes) * 100).toFixed(0) : 0,
+            }));
             
             setResults({
-                countA,
-                countB,
-                percentA: Number(percentA),
-                percentB: Number(percentB),
+                formattedResults,
                 totalVotes
             });
 
         } catch (error) {
             console.error(`Error al obtener resultados de encuesta ${surveyId}:`, error);
         }
-    }, [surveyId, optionA, optionB]);
+    }, [surveyId, options]);
 
 
     const fetchSurveyStatus = useCallback(async () => {
@@ -183,12 +186,10 @@ const InteractiveSurvey = ({ surveyId, question, optionA, optionB, showAlert }) 
     }, [surveyId, userId, fetchResults]);
 
     useEffect(() => {
-        // Ejecutamos fetchResults sin esperar que el usuario vote, para cargar resultados si existen
-        fetchResults(surveyId); 
         fetchSurveyStatus();
-    }, [fetchSurveyStatus, fetchResults, surveyId]); 
+    }, [fetchSurveyStatus]);
 
-    const handleVote = async (option) => {
+    const handleVote = async (optionName) => {
         if (!auth.currentUser) {
             showAlert("Acceso Denegado", "Debes iniciar sesión para votar en las encuestas.");
             return;
@@ -196,18 +197,16 @@ const InteractiveSurvey = ({ surveyId, question, optionA, optionB, showAlert }) 
 
         setLoading(true);
         try {
-            // Guardar el voto del usuario
             await addDoc(collection(db, 'survey_responses'), {
                 user_id: userId,
                 survey_id: surveyId,
-                voted_option: option,
-                timestamp: serverTimestamp() 
+                voted_option: optionName,
+                timestamp: new Date() 
             });
 
-            // Actualizar la UI
-            setUserVotedOption(option);
+            setUserVotedOption(optionName);
             await fetchResults(surveyId);
-            showAlert("¡Voto Guardado!", `Tu voto por "${option}" ha sido registrado.`, 'success');
+            showAlert("¡Voto Guardado!", `Tu voto por "${optionName}" ha sido registrado.`, 'success');
 
         } catch (error) {
             console.error("Error al registrar el voto:", error);
@@ -215,6 +214,72 @@ const InteractiveSurvey = ({ surveyId, question, optionA, optionB, showAlert }) 
         } finally {
             setLoading(false);
         }
+    };
+
+    const renderResults = () => {
+        if (!results) return null;
+
+        if (isDualOption) {
+            // 🚨 OPCIÓN 1: BARRA SEGMENTADA (Para 2 opciones)
+            const resultA = results.formattedResults[0];
+            const resultB = results.formattedResults[1];
+
+            return (
+                <View>
+                    <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
+                    
+                    {/* Leyendas */}
+                    <View style={styles.segmentedLegendContainer}>
+                        <Text style={[styles.segmentedOptionText, { color: userVotedOption === resultA.name ? USER_VOTE_COLOR : resultA.color }]}>
+                            {resultA.name} ({resultA.percent}%)
+                        </Text>
+                         <Text style={[styles.segmentedOptionText, { color: userVotedOption === resultB.name ? USER_VOTE_COLOR : resultB.color }]}>
+                            {resultB.name} ({resultB.percent}%)
+                        </Text>
+                    </View>
+
+                    {/* Barra Única Segmentada */}
+                    <View style={styles.segmentedBarContainer}>
+                        <View style={[
+                            styles.barSegment, 
+                            { 
+                                width: `${resultA.percent}%`, 
+                                backgroundColor: userVotedOption === resultA.name ? USER_VOTE_COLOR : resultA.color
+                            }
+                        ]} />
+                        <View style={[
+                            styles.barSegment, 
+                            { 
+                                width: `${resultB.percent}%`, 
+                                backgroundColor: userVotedOption === resultB.name ? USER_VOTE_COLOR : resultB.color
+                            }
+                        ]} />
+                    </View>
+                </View>
+            );
+        }
+
+        // 🚨 OPCIÓN 2: TILES DE PORCENTAJE (Para 3+ opciones, como alternativa visual)
+        return (
+            <View>
+                <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
+                
+                <View style={styles.tileResultsContainer}>
+                    {results.formattedResults
+                        .sort((a, b) => b.count - a.count) 
+                        .map(result => (
+                        <View key={result.name} style={[styles.resultTile, { backgroundColor: result.color }]}>
+                            <Text style={[styles.tileName, { color: userVotedOption === result.name ? USER_VOTE_COLOR : '#fff' }]} numberOfLines={1}>
+                                {result.name}
+                            </Text>
+                            <Text style={[styles.tilePercent, { color: userVotedOption === result.name ? USER_VOTE_COLOR : '#fff' }]}>
+                                {result.percent}%
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        );
     };
 
     const isVoted = userVotedOption !== null && results !== null;
@@ -226,63 +291,22 @@ const InteractiveSurvey = ({ surveyId, question, optionA, optionB, showAlert }) 
             {!isVoted ? (
                 // --- BOTONES DE VOTACIÓN ---
                 <View style={styles.votingButtonsContainer}>
-                    <TouchableOpacity 
-                        style={[styles.voteButton, { backgroundColor: VOTE_COLOR_A }]}
-                        onPress={() => handleVote(optionA)}
-                        disabled={loading}
-                    >
-                        <Text style={styles.voteButtonText}>{optionA}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                        style={[styles.voteButton, { backgroundColor: VOTE_COLOR_B }]}
-                        onPress={() => handleVote(optionB)}
-                        disabled={loading}
-                    >
-                        <Text style={styles.voteButtonText}>{optionB}</Text>
-                    </TouchableOpacity>
+                    {options.map(option => (
+                         <TouchableOpacity 
+                            key={option.name}
+                            style={[styles.voteButton, { backgroundColor: option.color }]}
+                            onPress={() => handleVote(option.name)}
+                            disabled={loading}
+                        >
+                            <Text style={styles.voteButtonText}>{option.name}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
 
             ) : (
-                // 🚨 Renderizar resultados solo si results existe
+                // 🚨 RENDERIZADO DE RESULTADOS
                 results ? (
-                    // --- RESULTADOS DEL GRÁFICO ---
-                    <View>
-                        <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
-                        
-                        {/* Opción A */}
-                        <View style={styles.resultRow}>
-                            <Text style={[styles.optionText, { 
-                                color: userVotedOption === optionA ? USER_VOTE_COLOR : VOTE_COLOR_A 
-                            }]}>{optionA}</Text>
-                            <Text style={styles.resultText}>{results.percentA}%</Text>
-                        </View>
-                        <View style={styles.barContainer}>
-                            <View style={[
-                                styles.barFill, 
-                                { 
-                                    width: `${results.percentA}%`, 
-                                    backgroundColor: userVotedOption === optionA ? USER_VOTE_COLOR : VOTE_COLOR_A 
-                                }
-                            ]} />
-                        </View>
-
-                        {/* Opción B */}
-                        <View style={styles.resultRow}>
-                            <Text style={[styles.optionText, { 
-                                color: userVotedOption === optionB ? USER_VOTE_COLOR : VOTE_COLOR_B
-                            }]}>{optionB}</Text>
-                            <Text style={styles.resultText}>{results.percentB}%</Text>
-                        </View>
-                        <View style={styles.barContainer}>
-                            <View style={[
-                                styles.barFill, 
-                                { 
-                                    width: `${results.percentB}%`, 
-                                    backgroundColor: userVotedOption === optionB ? USER_VOTE_COLOR : VOTE_COLOR_B
-                                }
-                            ]} />
-                        </View>
-                    </View>
+                    renderResults()
                 ) : (
                     <View style={{height: 100, justifyContent: 'center'}}>
                         <Text style={styles.placeholderText}>Cargando resultados de la encuesta...</Text>
@@ -298,6 +322,7 @@ export default function Home({ navigation }) {
     const flatListRef = useRef(null); 
     const [currentIndex, setCurrentIndex] = useState(0); 
 
+    // 🚨 DEFINICIÓN DE LOS ESTADOS PRINCIPALES Y ALERTAS
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
     const [profileImage, setProfileImage] = useState(null);
@@ -307,7 +332,7 @@ export default function Home({ navigation }) {
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [loopedProducts, setLoopedProducts] = useState([]);
 
-    // 🚨 MOVIDO: DEFINICIÓN DE showAlert y hideAlert
+    // 🚨 DEFINICIÓN DE showAlert y hideAlert (CORRECCIÓN DE ALCANCE)
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
         setIsAlertVisible(true);
@@ -317,6 +342,7 @@ export default function Home({ navigation }) {
         setIsAlertVisible(false);
     };
     // ---------------------------------------------
+
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -489,6 +515,7 @@ export default function Home({ navigation }) {
             </View>
 
             {isMenuVisible && (
+                // 🚨 MENÚ DESPLEGABLE CON ESTILOS RESTAURADOS
                 <View style={styles.profileMenu}>
                     <View style={styles.menuHeader}>
                         <Text style={styles.menuName}>{userName}</Text>
@@ -566,22 +593,38 @@ export default function Home({ navigation }) {
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Encuestas</Text>
                     
-                    {/* 🚨 ENCUESTA 1: TEAM CPU */}
+                    {/* 🚨 ENCUESTA 1: TEAM CPU (Barra Segmentada) */}
                     <InteractiveSurvey 
                         surveyId="cpu_team"
                         question="¿Eres Team AMD o Team Intel?"
-                        optionA="AMD"
-                        optionB="Intel"
-                        showAlert={showAlert} // Pasamos la función de alerta
+                        options={[
+                            { name: "AMD", color: '#dc3545' }, 
+                            { name: "Intel", color: '#007AFF' }
+                        ]}
+                        showAlert={showAlert} 
                     />
 
-                    {/* 🚨 ENCUESTA 2: TEAM OS */}
+                    {/* 🚨 ENCUESTA 2: TEAM OS (Barra Segmentada) */}
                     <InteractiveSurvey 
                         surveyId="os_team"
                         question="¿Usas Windows o Linux?"
-                        optionA="Windows"
-                        optionB="Linux"
-                        showAlert={showAlert} // Pasamos la función de alerta
+                        options={[
+                            { name: "Windows", color: '#007AFF' }, 
+                            { name: "Linux", color: '#4CAF50' }
+                        ]}
+                        showAlert={showAlert} 
+                    />
+                     {/* 🚨 ENCUESTA 3: COMPONENTE VITAL (Tiles de Porcentaje) */}
+                    <InteractiveSurvey 
+                        surveyId="main_component"
+                        question="¿Cuál es el componente más vital de tu PC?"
+                        options={[
+                            { name: "GPU", color: '#dc3545' },
+                            { name: "CPU", color: '#007AFF' },
+                            { name: "RAM", color: '#FFC107' },
+                            { name: "SSD/NVMe", color: '#4CAF50' },
+                        ]}
+                        showAlert={showAlert} 
                     />
                 </View>
                 {/* FIN SECCIÓN ENCUESTAS */}
@@ -726,6 +769,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-around',
         marginTop: 10,
         marginBottom: 5,
+        flexWrap: 'wrap',
     },
     voteButton: {
         paddingVertical: 12,
@@ -733,6 +777,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         minWidth: '45%',
         alignItems: 'center',
+        marginVertical: 5,
     },
     voteButtonText: {
         color: '#FFF',
@@ -773,5 +818,109 @@ const styles = StyleSheet.create({
     barFill: {
         height: '100%',
         borderRadius: 5,
-    }
+    },
+    // 🚨 ESTILOS DEL MENÚ DESPLEGABLE (Restaurados)
+    profileMenu: {
+        position: 'absolute',
+        top: 60, 
+        right: 15,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
+        width: 200,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 100, 
+        padding: 10,
+    },
+    menuHeader: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        paddingBottom: 10,
+        marginBottom: 10,
+        alignItems: 'center',
+    },
+    menuName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: VOTE_COLOR_A,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+    },
+    menuText: {
+        fontSize: 14,
+        color: '#333',
+    },
+    logoutButton: {
+        backgroundColor: RED_COLOR,
+        borderRadius: 5,
+        paddingVertical: 10,
+        marginTop: 10,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    logoutButtonText: {
+        color: 'white',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    // 🚨 ESTILOS PARA BARRA SEGMENTADA (2 OPCIONES)
+    segmentedBarContainer: {
+        flexDirection: 'row',
+        width: '100%',
+        height: 15,
+        backgroundColor: '#eee',
+        borderRadius: 7.5,
+        marginBottom: 15,
+        overflow: 'hidden',
+    },
+    barSegment: {
+        height: '100%',
+    },
+    segmentedLegendContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 8,
+    },
+    segmentedOptionText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    // 🚨 ESTILOS PARA TILES (3+ OPCIONES)
+    tileResultsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginTop: 10,
+        marginBottom: 10,
+        width: '100%',
+    },
+    resultTile: {
+        width: '48%', // Dos por fila
+        height: 65,
+        marginVertical: 4,
+        borderRadius: 10,
+        padding: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    tileName: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
+        textAlign: 'center',
+    },
+    tilePercent: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
 });
