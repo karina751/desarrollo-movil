@@ -84,7 +84,7 @@ const PasswordResetModal = ({ isVisible, onClose, onReset, loading, message, res
                 <View style={styles.passwordResetModalCard}>
                     <Text style={styles.passwordResetTitle}>Restablecer Contraseña</Text>
                     <Text style={styles.passwordResetText}>
-                        Ingresa tu correo electrónico para recibir un enlace para restablecer tu contraseña.
+                        Ingrese su correo electrónico para recibir un enlace para restablecer su contraseña.
                     </Text>
                     <View style={styles.inputGroup}>
                         <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icon} />
