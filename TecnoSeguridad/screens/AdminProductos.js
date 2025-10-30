@@ -1,4 +1,3 @@
-// Archivo: AdminProductos.js - CÓDIGO FINAL Y CORREGIDO
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, 

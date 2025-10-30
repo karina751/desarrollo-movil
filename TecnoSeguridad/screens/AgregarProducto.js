@@ -1,4 +1,3 @@
-// Archivo: AgregarProducto.js - CÓDIGO FINAL Y CORREGIDO
 import React, { useState, useEffect } from 'react';
 import { 
     View, 
