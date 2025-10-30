@@ -103,6 +103,7 @@ export default function Home({ navigation }) {
             }
             setIsLoading(false);
         }
+        fetchUserData();
     }, []);
 
     const showAlert = (title, message, type = 'error') => {
