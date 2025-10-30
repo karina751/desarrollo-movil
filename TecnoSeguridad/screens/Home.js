@@ -259,7 +259,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
             );
         }
 
-        // OPCIÓN 2: TILES DE PORCENTAJE (Para 3+ opciones, como alternativa visual)
+        // 🚨 OPCIÓN 2: TILES DE PORCENTAJE (Para 3+ opciones, como alternativa visual)
         return (
             <View>
                 <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
@@ -623,7 +623,7 @@ export default function Home({ navigation }) {
                             { name: "GPU", color: '#dc3545' },
                             { name: "CPU", color: '#007AFF' },
                             { name: "RAM", color: '#FFC107' },
-                            { name: "SSD/NVMe", color: '#4CAF50' },
+                            { name: "Disco SSD", color: '#4CAF50' },
                         ]}
                         showAlert={showAlert} 
                     />
