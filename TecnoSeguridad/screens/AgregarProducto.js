@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'; 
+// Archivo: AgregarProducto.js - CÓDIGO FINAL Y CORREGIDO
+import React, { useState, useEffect } from 'react';
 import { 
     View, 
     Text, 
@@ -13,24 +14,28 @@ import {
     ScrollView, 
     KeyboardAvoidingView, 
     Platform,
-    Alert, // 🚨 IMPORTADO Alert para el menú
+    Alert, // Mantener si lo necesitas en otro lugar, pero no lo usamos para el picker aquí
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig'; 
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker'; // 🚨 IMPORTACIÓN AÑADIDA
-import { subirImagenACloudinary } from '../src/config/cloudinaryConfig'; // 🚨 FUNCIÓN GLOBAL
+// 🚨 Importaciones de navegación y ImagePicker
+import { useNavigation, useRoute } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker'; 
+import { subirImagenACloudinary } from '../src/config/cloudinaryConfig'; 
 
 // --- Variables de color ajustadas ---
-const BLUE_COLOR_SOFT = '#1E90FF';
+const BLUE_COLOR_SOFT = '#1E90FF'; // Azul principal
 const RED_COLOR = '#FF4136';
 const GREEN_COLOR = '#4CAF50';
-// Componente CustomAlert (Reutilizado)
+
+// Componente CustomAlert (Reutilizado para Feedback)
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? GREEN_COLOR : RED_COLOR;
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
+
     return (
         <Modal
             animationType="fade"
@@ -39,27 +44,25 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             onRequestClose={onClose}
         >
             <View style={customAlertStyles.modalContainer}>
-                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 
-2 }]}>
+                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
                     <View style={customAlertStyles.headerContainer}>
-                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
-                         <Text style={[customAlertStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
-               
-      </View>
+                           <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                           <Text style={[customAlertStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
+                    </View>
                     <Text style={[customAlertStyles.alertMessageBase, { color: feedbackColor }]}>{message}</Text>
                     <TouchableOpacity 
                         style={[customAlertStyles.alertButton, { backgroundColor: feedbackColor }]} 
-                    
-     onPress={onClose}
+                        onPress={onClose}
                     >
                         <Text style={customAlertStyles.alertButtonText}>OK</Text>
                     </TouchableOpacity>
                 </View>
             </View>
-   
-      </Modal>
+        </Modal>
     );
 };
+
+// Estilos específicos para el Custom Alert (Se mantienen)
 const customAlertStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
     alertBox: {
@@ -70,8 +73,7 @@ const customAlertStyles = StyleSheet.create({
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-       
-  shadowOpacity: 0.25,
+        shadowOpacity: 0.25,
         shadowRadius: 4,
         elevation: 5,
     },
@@ -82,23 +84,73 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// 🚨 COMPONENTE AGREGAR PRODUCTO
+
+// 🚨 NUEVO COMPONENTE: MODAL PERSONALIZADO PARA SELECCIÓN DE ORIGEN DE IMAGEN
+const ImageSourceOptions = ({ isVisible, onTakePhoto, onSelectGallery, onCancel }) => {
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onCancel}
+        >
+            <View style={styles.sourceModalContainer}>
+                <View style={styles.sourceModalContent}>
+                    <Text style={styles.sourceModalTitle}>Seleccionar Imagen</Text>
+                    <Text style={styles.sourceModalSubtitle}>¿Deseas tomar una foto o seleccionar una de la galería?</Text>
+
+                    {/* Botón Tomar Foto */}
+                    <TouchableOpacity 
+                        style={[styles.sourceOptionButton, { backgroundColor: BLUE_COLOR_SOFT }]}
+                        onPress={onTakePhoto}
+                    >
+                        <FontAwesome name="camera" size={20} color="white" style={styles.sourceIcon} />
+                        <Text style={styles.sourceButtonText}>Tomar Foto</Text>
+                    </TouchableOpacity>
+
+                    {/* Botón Seleccionar de Galería */}
+                    <TouchableOpacity 
+                        style={[styles.sourceOptionButton, { backgroundColor: BLUE_COLOR_SOFT }]}
+                        onPress={onSelectGallery}
+                    >
+                        <FontAwesome name="image" size={20} color="white" style={styles.sourceIcon} />
+                        <Text style={styles.sourceButtonText}>Galería</Text>
+                    </TouchableOpacity>
+
+                    {/* Botón Cancelar */}
+                    <TouchableOpacity 
+                        style={[styles.sourceCancelButton]}
+                        onPress={onCancel}
+                    >
+                        <Text style={styles.sourceCancelText}>Cancelar</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+
+// 🚨 COMPONENTE PRINCIPAL (Reestructurado para ser un Modal)
 export default function AgregarProducto({ isVisible, onClose, onProductAdded, productToEdit }) {
+    // 🚨 Extraemos la lógica de estado del formulario aquí
     const [id, setId] = useState(null);
     const [productName, setProductName] = useState('');
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState('');
-    const [stock, setStock] = useState(''); // Estado stock
-    const [imageURL, setImageURL] = useState(''); // URL final de la imagen
-    const [localImageUri, setLocalImageUri] = useState(null); // URI local seleccionada
+    const [stock, setStock] = useState('');
+    const [imageURL, setImageURL] = useState('');
+    const [localImageUri, setLocalImageUri] = useState(null); 
+    
+    // 🚨 ESTADOS DE UI/FEEDBACK
     const [isSaving, setIsSaving] = useState(false);
     const [alertVisible, setAlertVisible] = useState(false);
     const [alertTitle, setAlertTitle] = useState('');
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState('error');
     
-    // 🚨 Bandera para controlar si se debe recargar la lista de productos al cerrar el modal
     const [shouldReload, setShouldReload] = useState(false); 
+    const [isSourceModalVisible, setIsSourceModalVisible] = useState(false); // 🚨 Nuevo estado para el modal de opciones
     
     
     useEffect(() => {
@@ -107,9 +159,9 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
             setProductName(productToEdit.name);
             setCategory(productToEdit.category);
             setPrice(String(productToEdit.price)); 
-            setStock(String(productToEdit.stock || '')); // Carga stock
-            setImageURL(productToEdit.image); // Carga la URL existente
-            setLocalImageUri(null); // Reseteamos la URI local en modo edición
+            setStock(String(productToEdit.stock || ''));
+            setImageURL(productToEdit.image);
+            setLocalImageUri(null);
         } else {
             // Modo Creación (Reset)
             setId(null);
@@ -118,7 +170,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
             setPrice('');
             setStock('');
             setImageURL('');
-            setLocalImageUri(null); // Reseteamos la URI local en modo creación
+            setLocalImageUri(null);
         }
     }, [productToEdit]);
 
@@ -152,15 +204,17 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         onClose(); // Cierra el modal
     };
     
-    // 🚨 NUEVA FUNCIÓN: Lógica para SUBIR la imagen (ya sea de cámara o galería)
+    
+    // 🚨 Lógica de Subida Centralizada (llamada por takePhoto/selectFromGallery)
     const handleUploadImage = async (uri) => {
         setIsSaving(true);
+        setIsSourceModalVisible(false); // Cierra el modal de opciones
+
         try {
             showAlert('Subiendo Imagen', 'Por favor espera, procesando la imagen...', 'success'); 
-            // 🚨 Uso de la función global y especificando la carpeta
+            
             const cloudinaryUrl = await subirImagenACloudinary(uri, 'productos');
-
-            // 3. Establecer la URI y la URL final
+            
             setLocalImageUri(uri);
             setImageURL(cloudinaryUrl);
             
@@ -174,8 +228,10 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
 
-    // 🚨 FUNCIÓN PARA TOMAR FOTO CON CÁMARA
+
+    // 🚨 FUNCIÓN PARA TOMAR FOTO CON CÁMARA (Llamada por el modal personalizado)
     const takePhoto = async () => {
+        setIsSourceModalVisible(false); // Cierra el modal de opciones
         const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
         if (cameraStatus !== 'granted') {
              showAlert('Permiso Denegado', 'Necesitamos acceso a la cámara para tomar una foto.', 'error');
@@ -194,8 +250,9 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
     
-    // 🚨 FUNCIÓN PARA SELECCIONAR DE GALERÍA
+    // 🚨 FUNCIÓN PARA SELECCIONAR DE GALERÍA (Llamada por el modal personalizado)
     const selectFromGallery = async () => {
+        setIsSourceModalVisible(false); // Cierra el modal de opciones
         const { status: mediaLibraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (mediaLibraryStatus !== 'granted') {
             showAlert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.', 'error');
@@ -214,18 +271,9 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
 
-    // 🚨 FUNCIÓN PRINCIPAL: MUESTRA EL MENÚ DE OPCIONES
+    // 🚨 FUNCIÓN PRINCIPAL: MUESTRA EL MODAL DE OPCIONES
     const pickImage = () => {
-        Alert.alert(
-            "Seleccionar Imagen",
-            "¿Deseas tomar una foto o seleccionar una de la galería?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                { text: "Tomar Foto", onPress: takePhoto },
-                { text: "Galería", onPress: selectFromGallery },
-            ],
-            { cancelable: true }
-        );
+        setIsSourceModalVisible(true);
     };
     
     // Manejar el guardado (URL en Firestore)
@@ -302,6 +350,14 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
             visible={isVisible}
             onRequestClose={handleClose}
         >
+             {/* Modal para opciones de imagen */}
+            <ImageSourceOptions 
+                isVisible={isSourceModalVisible}
+                onTakePhoto={takePhoto}
+                onSelectGallery={selectFromGallery}
+                onCancel={() => setIsSourceModalVisible(false)}
+            />
+
             <LinearGradient 
                 colors={['#97c1e6', '#e4eff9']} 
             
@@ -330,7 +386,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                                 </View>
          
                                 <Text style={styles.modalSubtitle}>
-                                     {id ? "Modifica los detalles del producto seleccionado." : "Selecciona una imagen desde la galería."}
+                                     {id ? "Modifica los detalles del producto seleccionado." : "Selecciona una imagen con la cámara o la galería."}
                                 </Text>
 
                                 <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
@@ -451,7 +507,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                     isVisible={alertVisible}
                     title={alertTitle}
                     message={alertMessage}
-                    onClose={() => setAlertVisible(false)} // 🚨 Aquí no necesitamos navegar, solo cerramos la alerta.
+                    onClose={() => setAlertVisible(false)} 
                     type={alertType}
        
                 />
@@ -604,5 +660,57 @@ const styles = StyleSheet.create({
         color: BLUE_COLOR_SOFT,
         fontSize: 17,
         fontWeight: 'bold',
+    },
+    
+    // 🚨 ESTILOS ADICIONALES PARA EL MODAL DE OPCIONES DE IMAGEN (COPIADOS DE PERFIL.JS)
+    sourceModalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    sourceModalContent: {
+        backgroundColor: 'white',
+        width: '100%',
+        padding: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        alignItems: 'center',
+    },
+    sourceModalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: BLUE_COLOR_SOFT,
+        marginBottom: 5,
+    },
+    sourceModalSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 15,
+    },
+    sourceOptionButton: {
+        flexDirection: 'row',
+        width: '100%',
+        paddingVertical: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
+    sourceIcon: {
+        marginRight: 10,
+    },
+    sourceButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    sourceCancelButton: {
+        marginTop: 5,
+        paddingVertical: 10,
+    },
+    sourceCancelText: {
+        color: RED_COLOR,
+        fontSize: 16,
     },
 });

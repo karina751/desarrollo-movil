@@ -12,7 +12,7 @@ import {
     Platform, 
     Keyboard, 
     KeyboardAvoidingView, 
-    Alert, // 🚨 IMPORTADO Alert para el menú
+    Alert, 
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -23,10 +23,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { subirImagenACloudinary } from '../src/config/cloudinaryConfig'; 
 
+// --- Variables de color ---
+const BLUE_COLOR = '#007AFF';
+const RED_COLOR = '#FF4136';
+const SUCCESS_COLOR = '#4CAF50'; 
+
 // --- Componente CustomAlert (Reutilizado para Feedback) ---
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
+    const feedbackColor = isSuccess ? SUCCESS_COLOR : RED_COLOR; 
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
     return (
         <Modal
@@ -54,7 +59,7 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
         </Modal>
     );
 };
-// Estilos específicos para el Custom Alert
+// Estilos específicos para el Custom Alert (Se mantienen)
 const customAlertStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
     alertBox: {
@@ -77,6 +82,53 @@ const customAlertStyles = StyleSheet.create({
 });
 // --- FIN CustomAlert ---
 
+
+// 🚨 NUEVO COMPONENTE: MODAL PERSONALIZADO PARA SELECCIÓN DE ORIGEN DE IMAGEN
+const ImageSourceOptions = ({ isVisible, onTakePhoto, onSelectGallery, onCancel }) => {
+    return (
+        <Modal
+            animationType="slide"
+            transparent={true}
+            visible={isVisible}
+            onRequestClose={onCancel}
+        >
+            <View style={styles.sourceModalContainer}>
+                <View style={styles.sourceModalContent}>
+                    <Text style={styles.sourceModalTitle}>Seleccionar Imagen</Text>
+                    <Text style={styles.sourceModalSubtitle}>¿Deseas tomar una foto o seleccionar una de la galería?</Text>
+
+                    {/* Botón Tomar Foto */}
+                    <TouchableOpacity 
+                        style={[styles.sourceOptionButton, { backgroundColor: BLUE_COLOR }]}
+                        onPress={onTakePhoto}
+                    >
+                        <FontAwesome name="camera" size={20} color="white" style={styles.sourceIcon} />
+                        <Text style={styles.sourceButtonText}>Tomar Foto</Text>
+                    </TouchableOpacity>
+
+                    {/* Botón Seleccionar de Galería */}
+                    <TouchableOpacity 
+                        style={[styles.sourceOptionButton, { backgroundColor: BLUE_COLOR }]}
+                        onPress={onSelectGallery}
+                    >
+                        <FontAwesome name="image" size={20} color="white" style={styles.sourceIcon} />
+                        <Text style={styles.sourceButtonText}>Galería</Text>
+                    </TouchableOpacity>
+
+                    {/* Botón Cancelar */}
+                    <TouchableOpacity 
+                        style={[styles.sourceCancelButton]}
+                        onPress={onCancel}
+                    >
+                        <Text style={styles.sourceCancelText}>Cancelar</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
+    );
+};
+
+
 export default function Perfil() {
     const navigation = useNavigation();
     
@@ -88,6 +140,8 @@ export default function Perfil() {
     const [isSaving, setIsSaving] = useState(false);
     
     const [shouldNavigate, setShouldNavigate] = useState(false); 
+    // 🚨 Nuevo estado para el modal de opciones de imagen
+    const [isSourceModalVisible, setIsSourceModalVisible] = useState(false); 
     
     // Estados para el Custom Alert
     const [isAlertVisible, setIsAlertVisible] = useState(false); 
@@ -112,8 +166,6 @@ export default function Perfil() {
         }
     };
     
-    // ... useEffect remains the same ...
-
     useEffect(() => {
         const fetchUserData = async () => {
             if (auth.currentUser) {
@@ -147,9 +199,11 @@ export default function Perfil() {
         }
     };
 
-    // 🚨 NUEVA FUNCIÓN: Lógica para SUBIR la imagen (ya sea de cámara o galería)
+    // 🚨 Lógica de Subida Centralizada (llamada por takePhoto/selectFromGallery)
     const handleUploadImage = async (uri) => {
         setIsSaving(true);
+        setIsSourceModalVisible(false); // Cierra el modal de opciones
+
         try {
             showAlert('Subiendo Imagen', 'Por favor espera...', 'success');
             
@@ -158,14 +212,15 @@ export default function Perfil() {
             
         } catch (error) {
             console.error('Error al subir/guardar la foto de perfil:', error);
-            showAlert('Error', error.message || 'No se pudo actualizar la foto de perfil.');
+            showAlert('Error', error.message || 'No se pudo actualizar la foto de perfil.', 'error');
         } finally {
-             // El setIsSaving(false) se maneja en hideAlert si es un error, o en saveProfileImageUrl si es éxito.
+            // setIsSaving(false) se llama en saveProfileImageUrl
         }
     }
     
     // 🚨 FUNCIÓN PARA TOMAR FOTO CON CÁMARA
     const takePhoto = async () => {
+        setIsSourceModalVisible(false); // Cierra el modal de opciones
         const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
         if (cameraStatus !== 'granted') {
              showAlert('Permiso Denegado', 'Necesitamos acceso a la cámara para tomar una foto.', 'error');
@@ -186,6 +241,7 @@ export default function Perfil() {
     
     // 🚨 FUNCIÓN PARA SELECCIONAR DE GALERÍA
     const selectFromGallery = async () => {
+        setIsSourceModalVisible(false); // Cierra el modal de opciones
         const { status: mediaLibraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (mediaLibraryStatus !== 'granted') {
             showAlert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.', 'error');
@@ -204,18 +260,9 @@ export default function Perfil() {
         }
     };
 
-    // 🚨 FUNCIÓN PRINCIPAL: MUESTRA EL MENÚ DE OPCIONES
+    // 🚨 FUNCIÓN PRINCIPAL: MUESTRA EL MODAL DE OPCIONES
     const pickImage = () => {
-        Alert.alert(
-            "Seleccionar Imagen",
-            "¿Deseas tomar una foto o seleccionar una de la galería?",
-            [
-                { text: "Cancelar", style: "cancel" },
-                { text: "Tomar Foto", onPress: takePhoto },
-                { text: "Galería", onPress: selectFromGallery },
-            ],
-            { cancelable: true }
-        );
+        setIsSourceModalVisible(true);
     };
 
 
@@ -228,7 +275,7 @@ export default function Perfil() {
         
         setProfileImage(uri);
         showAlert('Éxito', 'Foto de perfil actualizada correctamente.', 'success'); 
-        setIsSaving(false); // Reinicia el estado de carga después del éxito
+        setIsSaving(false); // Reinicia el estado de carga
     };
 
     // Lógica para guardar los cambios en el formulario y NAVEGAR A HOME
@@ -274,6 +321,14 @@ export default function Perfil() {
             end={{ x: 0.5, y: 1 }}
             style={styles.container}
         >
+            {/* Modal para opciones de imagen */}
+            <ImageSourceOptions 
+                isVisible={isSourceModalVisible}
+                onTakePhoto={takePhoto}
+                onSelectGallery={selectFromGallery}
+                onCancel={() => setIsSourceModalVisible(false)}
+            />
+
             <CustomAlert
                 isVisible={isAlertVisible} 
                 title={alertData.title}
@@ -362,7 +417,6 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e4eff9' },
     loadingText: { marginTop: 10, fontSize: 16, color: '#007AFF' },
-    // 🚨 Nuevo estilo para el contenedor de scroll/keyboard
     scrollContainer: {
         flex: 1,
         width: '100%',
@@ -447,5 +501,57 @@ const styles = StyleSheet.create({
         color: '#FFFFFF', 
         fontSize: 16,
         fontWeight: 'bold', 
+    },
+    
+    // 🚨 ESTILOS ADICIONALES PARA EL MODAL DE OPCIONES DE IMAGEN
+    sourceModalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    sourceModalContent: {
+        backgroundColor: 'white',
+        width: '100%',
+        padding: 20,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        alignItems: 'center',
+    },
+    sourceModalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: BLUE_COLOR,
+        marginBottom: 5,
+    },
+    sourceModalSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 15,
+    },
+    sourceOptionButton: {
+        flexDirection: 'row',
+        width: '100%',
+        paddingVertical: 15,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
+    sourceIcon: {
+        marginRight: 10,
+    },
+    sourceButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    sourceCancelButton: {
+        marginTop: 5,
+        paddingVertical: 10,
+    },
+    sourceCancelText: {
+        color: RED_COLOR,
+        fontSize: 16,
     },
 });
