@@ -10,17 +10,18 @@ import {
     Platform,
     KeyboardAvoidingView,
     Modal,
+    ActivityIndicator, 
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { auth, db } from '../src/config/firebaseConfig'; // Instancia de Auth y Firestore
-import { createUserWithEmailAndPassword } from 'firebase/auth'; // Función para crear usuario
-import { doc, setDoc } from 'firebase/firestore'; // Función para guardar datos en Firestore
-import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
+import { auth, db } from '../src/config/firebaseConfig';
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; // 👈 [1] IMPORTACIÓN CRÍTICA: signOut
+import { doc, setDoc } from 'firebase/firestore';
+import { LinearGradient } from 'expo-linear-gradient';
 
 
-// Componente CustomAlert: Modal de alerta con ícono y color dinámico.
+// Componente CustomAlert 
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
-    // Definir colores e íconos para retroalimentación (solo estos cambian)
+    // Definir colores e íconos para retroalimentación 
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
@@ -85,7 +86,7 @@ const PasswordRequirements = ({ hasUppercase, hasLowercase, hasNumber, hasMinLen
 };
 
 
-// Estilos específicos para el Custom Alert (MODIFICADOS)
+// Estilos específicos para el Custom Alert
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -104,20 +105,17 @@ const customAlertStyles = StyleSheet.create({
         shadowOpacity: 0.25,
         shadowRadius: 4,
         elevation: 5,
-        // El borde se aplica dinámicamente
     },
     headerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 10,
     },
-    // Estilo base para el título (siempre azul)
     alertTitleBase: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#007AFF',
     },
-    // Estilo base para el mensaje (color neutral)
     alertMessageBase: {
         fontSize: 15,
         color: '#555',
@@ -130,7 +128,6 @@ const customAlertStyles = StyleSheet.create({
         paddingHorizontal: 20,
         width: '100%',
         alignItems: 'center',
-        // El color de fondo se aplica dinámicamente
     },
     alertButtonText: {
         color: 'white',
@@ -140,20 +137,16 @@ const customAlertStyles = StyleSheet.create({
 });
 
 
-// Valida formato (letras, acentos, espacios, guiones) y repetición.
+// Valida formato y repetición de nombres/apellidos
 const isValidName = (text) => {
-    // 1. Regex para el formato de caracteres.
     const nameRegex = /^[a-zA-Z\sñÑáéíóúÁÉÍÓÚ'-]+$/;
     if (!nameRegex.test(text)) {
-        return false; // Falla si tiene números o símbolos
+        return false;
     }
-
-    // 2. Comprobación de Caracteres Repetidos (5 o más veces consecutivas).
     const repetitionRegex = /(.)\1{4,}/;
     if (repetitionRegex.test(text)) {
-        return false; // Falla si el patrón se repite
+        return false;
     }
-
     return true;
 };
 
@@ -166,7 +159,7 @@ export default function SignUp({ navigation }) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    // Estados de Error Específicos (Mostrados debajo del campo)
+    // Estados de Error Específicos
     const [firstNameError, setFirstNameError] = useState('');
     const [lastNameError, setLastNameError] = useState('');
     const [passwordError, setPasswordError] = useState('');
@@ -184,81 +177,58 @@ export default function SignUp({ navigation }) {
 
     // Estados y funciones para el Custom Alert (Modal)
     const [isAlertVisible, setIsAlertVisible] = useState(false);
-    // Añadido 'type' para el alert dinámico
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
-
-    // Muestra el Custom Alert con título, mensaje y tipo.
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
         setIsAlertVisible(true);
     };
-
-    // Oculta el Custom Alert
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
 
-
-    // Valida Nombre en tiempo real (longitud, espacios, formato, repetición).
     const validateFirstName = (text) => {
         setFirstName(text);
-
         const trimmedText = text.trim();
-
-        // 1. Campo vacío o solo espacios
         if (trimmedText.length === 0) {
             setFirstNameError(text.length > 0 ? "El nombre no puede ser solo espacios en blanco." : '');
             return;
         }
-
-        // 2. Longitud útil (Mínimo 2 letras)
         if (trimmedText.length < 2) {
             setFirstNameError("El nombre es demasiado corto (mínimo 2 letras útiles).");
         }
-        // 3. Formato y Repetición
         else if (!isValidName(trimmedText)) {
             setFirstNameError("Solo se permiten letras, espacios o acentos, sin repeticiones excesivas.");
         } else {
-            setFirstNameError(''); // Éxito
+            setFirstNameError('');
         }
     };
 
-    // Valida Apellido en tiempo real (longitud, espacios, formato, repetición).
     const validateLastName = (text) => {
         setLastName(text);
-
         const trimmedText = text.trim();
-
-        // 1. Campo vacío o solo espacios
         if (trimmedText.length === 0) {
             setLastNameError(text.length > 0 ? "El apellido no puede ser solo espacios en blanco." : '');
             return;
         }
-
-        // 2. Longitud útil (Mínimo 2 letras)
         if (trimmedText.length < 2) {
             setLastNameError("El apellido es demasiado corto (mínimo 2 letras útiles).");
         }
-        // 3. Formato y Repetición
         else if (!isValidName(trimmedText)) {
             setLastNameError("Solo se permiten letras, espacios o acentos, sin repeticiones excesivas.");
         } else {
-            setLastNameError(''); // Éxito
+            setLastNameError('');
         }
     };
 
-    // Valida la complejidad de la contraseña en tiempo real.
     const validatePassword = (text) => {
         setPassword(text);
         setPasswordError('');
 
-        // Chequeo de complejidad
         setHasMinLength(text.length >= 6);
         setHasLowercase(/[a-z]/.test(text));
         setHasUppercase(/[A-Z]/.test(text));
         setHasNumber(/\d/.test(text));
 
-        // Chequeo de coincidencia con la confirmación
         if (confirmPassword && text !== confirmPassword) {
             setConfirmMatchError("Las contraseñas no coinciden.");
         } else {
@@ -266,7 +236,6 @@ export default function SignUp({ navigation }) {
         }
     };
 
-    // Valida la coincidencia de la confirmación en tiempo real.
     const validateConfirmPassword = (text) => {
         setConfirmPassword(text);
         setConfirmMatchError('');
@@ -279,32 +248,26 @@ export default function SignUp({ navigation }) {
     };
 
 
-    // Maneja el proceso de registro completo (Auth y Firestore).
+    // Maneja el proceso de registro completo 
     const handleSignUp = async () => {
-        // --- 1. VALIDACIONES FINALES ---
-
-        // 1.1. Validación: Campos Obligatorios
+        // --- 1. VALIDACIONES FINALES
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !password || !confirmPassword) {
             showAlert("Error", "Todos los campos son obligatorios.");
             return;
         }
 
-        // 1.2. Validación: Errores Visuales Pendientes
-        const hasVisibleError = firstNameError || lastNameError || passwordError || confirmMatchError;
-
+        const hasVisibleError = firstNameError || lastNameError || confirmMatchError;
         if (hasVisibleError) {
             showAlert("Error de Validación", "Por favor, corrige los errores marcados en los campos.");
             return;
         }
 
-        // 1.3. Validación: Complejidad de Contraseña
         const isPasswordValid = hasMinLength && hasLowercase && hasUppercase && hasNumber;
         if (!isPasswordValid) {
             setPasswordError("La contraseña no cumple con todos los requisitos.");
             showAlert("Error", "La contraseña no cumple con todos los requisitos.");
             return;
         }
-
 
         // --- 2. REGISTRO EN FIREBASE Y FIRESTORE ---
 
@@ -313,43 +276,41 @@ export default function SignUp({ navigation }) {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // ÉXITO DE AUTENTICACIÓN (Muestra verde)
-            showAlert("Registro exitoso", "Cuenta creada. Regresando a Inicio de Sesión.", 'success');
-
-            // Redirige a Login después de un breve tiempo
-            setTimeout(() => {
-                navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-            }, 1500);
-
             // B. Guardar datos adicionales en Firestore
-            try {
-                await setDoc(doc(db, "users", user.uid), {
-                    firstName: firstName.trim(), // Guarda el nombre sin espacios extra
-                    lastName: lastName.trim(), // Guarda el apellido sin espacios extra
-                    email: email,
-                    createdAt: new Date()
-                });
-            } catch (firestoreError) {
-                // Fallo en la base de datos (la cuenta Auth ya existe)
-                console.error("Error al guardar datos de usuario en Firestore:", firestoreError);
-            }
+            await setDoc(doc(db, "users", user.uid), {
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email,
+                createdAt: new Date()
+            });
+
+            // C. CERRAR SESIÓN Y REDIRIGIR
+            
+            //  PASO 1: Cerrar sesión inmediatamente para evitar el inicio de sesión automático
+            await signOut(auth); 
+
+            //  PASO 2: Mostrar mensaje de éxito
+            showAlert("Registro Exitoso", "Tu cuenta ha sido creada. Ahora inicia sesión.", 'success');
+            
+            //  PASO 3: Redirigir a Login después de un breve tiempo
+            setTimeout(() => {
+                // navigation.reset borra el historial y lleva a Login, impidiendo que el usuario vuelva a Signup
+                navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); 
+            }, 1800); 
 
         } catch (error) {
-            // C. Manejo de errores de Firebase Authentication (Muestra rojo)
-            let errorMessage = "Hubo un problema al registrar el usuario.";
+            // D. Manejo de errores de Firebase Authentication
+            let errorMessage = "Hubo un error al registrar el usuario.";
 
             switch (error.code) {
                 case 'auth/email-already-in-use':
                     errorMessage = "El correo electrónico ya está en uso.";
                     break;
                 case 'auth/invalid-email':
-                    errorMessage = "El formato del correo electrónico no es válido.";
-                    break;
-                case 'auth/network-request-failed':
-                    errorMessage = "Error de conexión. Por favor, intenta más tarde.";
+                    errorMessage = "El formato del correo electrónico es inválido.";
                     break;
                 default:
-                    console.error("Error de registro (Auth):", error);
+                    console.error("Error de registro:", error);
                     break;
             }
             showAlert("Error de Registro", errorMessage);
@@ -363,13 +324,13 @@ export default function SignUp({ navigation }) {
             end={{ x: 0.5, y: 1 }}
             style={styles.contenedorFondo}
         >
-            {/* Renderiza la alerta personalizada */}
+            {/* Renderizado del Modal de Alerta */}
             <CustomAlert
                 isVisible={isAlertVisible}
                 title={alertData.title}
                 message={alertData.message}
                 onClose={hideAlert}
-                type={alertData.type} // Pasa el tipo ('error' o 'success')
+                type={alertData.type}
             />
 
             <KeyboardAvoidingView
@@ -383,7 +344,6 @@ export default function SignUp({ navigation }) {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-
                     <View style={styles.contenedorBlanco}>
 
                         {/* Logo y Nombre de la Aplicación */}
@@ -404,12 +364,11 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Nombre"
                                 value={firstName}
-                                onChangeText={validateFirstName} // Validación en tiempo real
+                                onChangeText={validateFirstName}
                                 autoCapitalize="words"
                                 keyboardType="default"
                             />
                         </View>
-                        {/* Mensaje de error de Nombre */}
                         {firstNameError ? <Text style={styles.textoError}>{firstNameError}</Text> : null}
 
 
@@ -421,12 +380,11 @@ export default function SignUp({ navigation }) {
                                 style={styles.campoEntrada}
                                 placeholder="Ingrese su Apellido"
                                 value={lastName}
-                                onChangeText={validateLastName} // Validación en tiempo real
+                                onChangeText={validateLastName}
                                 autoCapitalize="words"
                                 keyboardType="default"
                             />
                         </View>
-                        {/* Mensaje de error de Apellido */}
                         {lastNameError ? <Text style={styles.textoError}>{lastNameError}</Text> : null}
 
 
@@ -485,7 +443,6 @@ export default function SignUp({ navigation }) {
                                 <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                             </TouchableOpacity>
                         </View>
-
                         {/* Mensaje de error si las contraseñas no coinciden */}
                         {confirmMatchError ? <Text style={styles.textoError}>{confirmMatchError}</Text> : null}
 
@@ -511,9 +468,6 @@ export default function SignUp({ navigation }) {
 
 const styles = StyleSheet.create({
     contenedorFondo: {
-        flex: 1,
-    },
-    keyboardAvoiding: {
         flex: 1,
     },
     scrollContenido: {
