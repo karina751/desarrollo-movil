@@ -8,8 +8,11 @@ import {
     Image,
     ScrollView,
     ActivityIndicator,
-    Alert,
     Modal,
+    Platform, 
+    Keyboard, 
+    KeyboardAvoidingView, 
+    Alert, // 🚨 IMPORTADO Alert para el menú
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -17,12 +20,14 @@ import { auth, db } from '../src/config/firebaseConfig';
 import { signOut } from 'firebase/auth'; 
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
+import { useNavigation } from '@react-navigation/native';
+import { subirImagenACloudinary } from '../src/config/cloudinaryConfig'; 
 
+// --- Componente CustomAlert (Reutilizado para Feedback) ---
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
-    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; 
-
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
     return (
         <Modal
             animationType="fade"
@@ -31,7 +36,8 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             onRequestClose={onClose}
         >
             <View style={customAlertStyles.modalContainer}>
-                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
+                <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 
+2 }]}>
                     <View style={customAlertStyles.headerContainer}>
                            <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
                            <Text style={[customAlertStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
@@ -48,7 +54,6 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
         </Modal>
     );
 };
-
 // Estilos específicos para el Custom Alert
 const customAlertStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
@@ -70,25 +75,44 @@ const customAlertStyles = StyleSheet.create({
     alertButton: { borderRadius: 10, paddingVertical: 10, paddingHorizontal: 20, width: '100%', alignItems: 'center' },
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
+// --- FIN CustomAlert ---
 
 export default function Perfil() {
-    const [firstName, setFirstName] = useState('');
+    const navigation = useNavigation();
+    
+    const [firstName, setFirstName] = useState(''); 
     const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
+    const [email, setEmail] = useState(''); 
     const [profileImage, setProfileImage] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     
+    const [shouldNavigate, setShouldNavigate] = useState(false); 
+    
     // Estados para el Custom Alert
-    const [isAlertVisible, setIsAlertVisible] = useState(false);
-    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
+    const [isAlertVisible, setIsAlertVisible] = useState(false); 
+    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' }); 
+
     const showAlert = (title, message, type = 'error') => {
-        setAlertData({ title, message, type });
-        setIsAlertVisible(true);
+        setAlertData({ title, message, type }); 
+        setIsAlertVisible(true); 
     };
+
     const hideAlert = () => {
         setIsAlertVisible(false);
+        setIsSaving(false); 
+        
+        if (shouldNavigate) {
+            setShouldNavigate(false); 
+            Keyboard.dismiss();
+            navigation.reset({ 
+                index: 0, 
+                routes: [{ name: 'HomeTabs' }] 
+            }); 
+        }
     };
+    
+    // ... useEffect remains the same ...
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -96,12 +120,12 @@ export default function Perfil() {
                 const userRef = doc(db, 'users', auth.currentUser.uid);
                 const docSnap = await getDoc(userRef);
                 
-                if (docSnap.exists()) {
+                if (docSnap.exists()) { 
                     const userData = docSnap.data();
                     setFirstName(userData.firstName);
                     setLastName(userData.lastName);
                     setEmail(userData.email);
-                    setProfileImage(userData.profileImage || null);
+                    setProfileImage(userData.profileImage || null); 
                 }
             }
             setIsLoading(false);
@@ -111,72 +135,126 @@ export default function Perfil() {
 
     // **Lógica de Cerrar Sesión**
     const handleSignOut = async () => {
-        setIsSaving(true); 
-        try {
-            await signOut(auth);
-            showAlert('Sesión Cerrada', 'Has cerrado tu sesión con éxito.', 'success');
+        setIsSaving(true);
+        try { 
+            await signOut(auth); 
+            showAlert('Sesión Cerrada', 'Has cerrado tu sesión con éxito.', 'success'); 
         } catch (error) {
-            console.error('Error al cerrar sesión:', error);
-            showAlert('Error de Sesión', 'No se pudo cerrar la sesión correctamente.');
+            console.error('Error al cerrar sesión:', error); 
+            showAlert('Error de Sesión', 'No se pudo cerrar la sesión correctamente.'); 
         } finally {
+            // Se mantiene isSaving para bloquear UI
         }
     };
-    
 
-    // 1. Lógica para seleccionar y subir una imagen de perfil
-    const pickImage = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            showAlert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.');
-            return;
+    // 🚨 NUEVA FUNCIÓN: Lógica para SUBIR la imagen (ya sea de cámara o galería)
+    const handleUploadImage = async (uri) => {
+        setIsSaving(true);
+        try {
+            showAlert('Subiendo Imagen', 'Por favor espera...', 'success');
+            
+            const cloudinaryUrl = await subirImagenACloudinary(uri, 'perfiles'); 
+            await saveProfileImageUrl(cloudinaryUrl);
+            
+        } catch (error) {
+            console.error('Error al subir/guardar la foto de perfil:', error);
+            showAlert('Error', error.message || 'No se pudo actualizar la foto de perfil.');
+        } finally {
+             // El setIsSaving(false) se maneja en hideAlert si es un error, o en saveProfileImageUrl si es éxito.
+        }
+    }
+    
+    // 🚨 FUNCIÓN PARA TOMAR FOTO CON CÁMARA
+    const takePhoto = async () => {
+        const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+        if (cameraStatus !== 'granted') {
+             showAlert('Permiso Denegado', 'Necesitamos acceso a la cámara para tomar una foto.', 'error');
+             return;
         }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
+        let result = await ImagePicker.launchCameraAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true, 
             aspect: [1, 1], 
-            quality: 1,
+            quality: 0.7, 
         });
 
         if (!result.canceled) {
-            saveLocalImageUri(result.assets[0].uri);
+            handleUploadImage(result.assets[0].uri);
         }
     };
     
-    // 2. Lógica para guardar la URL de la imagen en Firestore
-    const saveLocalImageUri = async (uri) => {
-        setIsSaving(true);
-        try {
-            const userUID = auth.currentUser.uid;
-            const userRef = doc(db, 'users', userUID);
-            
-            await updateDoc(userRef, { profileImage: uri });
-            
-            setProfileImage(uri);
-            showAlert('Éxito', 'Foto de perfil actualizada correctamente.', 'success');
-        } catch (error) {
-            console.error('Error al guardar la URL de la imagen:', error);
-            showAlert('Error', 'No se pudo actualizar la foto de perfil.');
-        } finally {
-            setIsSaving(false);
+    // 🚨 FUNCIÓN PARA SELECCIONAR DE GALERÍA
+    const selectFromGallery = async () => {
+        const { status: mediaLibraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (mediaLibraryStatus !== 'granted') {
+            showAlert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.', 'error');
+            return;
+        }
+
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true, 
+            aspect: [1, 1], 
+            quality: 0.7, 
+        });
+
+        if (!result.canceled) {
+            handleUploadImage(result.assets[0].uri);
         }
     };
 
-    // 3. Lógica para guardar los cambios en el formulario
+    // 🚨 FUNCIÓN PRINCIPAL: MUESTRA EL MENÚ DE OPCIONES
+    const pickImage = () => {
+        Alert.alert(
+            "Seleccionar Imagen",
+            "¿Deseas tomar una foto o seleccionar una de la galería?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                { text: "Tomar Foto", onPress: takePhoto },
+                { text: "Galería", onPress: selectFromGallery },
+            ],
+            { cancelable: true }
+        );
+    };
+
+
+    // FUNCIÓN AUXILIAR: Guarda la URL en Firestore
+    const saveProfileImageUrl = async (uri) => {
+        const userUID = auth.currentUser.uid;
+        const userRef = doc(db, 'users', userUID); 
+        
+        await updateDoc(userRef, { profileImage: uri }); 
+        
+        setProfileImage(uri);
+        showAlert('Éxito', 'Foto de perfil actualizada correctamente.', 'success'); 
+        setIsSaving(false); // Reinicia el estado de carga después del éxito
+    };
+
+    // Lógica para guardar los cambios en el formulario y NAVEGAR A HOME
     const handleSaveChanges = async () => {
         setIsSaving(true);
-        try {
+        try { 
+            // Cerrar teclado antes de la alerta
+            Keyboard.dismiss();
+
             const userRef = doc(db, 'users', auth.currentUser.uid);
-            await updateDoc(userRef, {
+            await updateDoc(userRef, { 
                 firstName: firstName,
                 lastName: lastName,
             });
-            showAlert('Éxito', 'Datos de perfil actualizados correctamente.', 'success');
+            
+            // 1. Activar la bandera de navegación ANTES de la alerta de éxito
+            setShouldNavigate(true);
+            
+            // 2. Mostrar alerta de éxito. hideAlert se encargará del resto.
+            showAlert('Éxito', 'Datos de perfil actualizados correctamente.', 'success'); 
+            
         } catch (error) {
-            console.error('Error al guardar los cambios:', error);
-            showAlert('Error', 'No se pudieron guardar los cambios.');
-        } finally {
-            setIsSaving(false);
+            console.error('Error al guardar los cambios:', error); 
+            showAlert('Error', 'No se pudieron guardar los cambios.'); 
+            setShouldNavigate(false); 
+            setIsSaving(false); 
         }
     };
 
@@ -187,7 +265,7 @@ export default function Perfil() {
                 <Text style={styles.loadingText}>Cargando perfil...</Text>
             </View>
         );
-    }
+    } 
 
     return (
         <LinearGradient
@@ -197,85 +275,98 @@ export default function Perfil() {
             style={styles.container}
         >
             <CustomAlert
-                isVisible={isAlertVisible}
+                isVisible={isAlertVisible} 
                 title={alertData.title}
                 message={alertData.message}
                 onClose={hideAlert}
                 type={alertData.type}
             />
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.card}>
-                    <Text style={styles.title}>Mi Perfil</Text>
-                    
-                    <View style={styles.profileImageContainer}>
-                        <Image
-                            source={profileImage ? { uri: profileImage } : { uri: 'https://via.placeholder.com/150' }}
-                            style={styles.profileImage}
-                        />
-                        <TouchableOpacity style={styles.changeImageButton} onPress={pickImage} disabled={isSaving}>
-                            <FontAwesome name="camera" size={20} color="white" />
+            {/* 🚨 KeyboardAvoidingView para evitar que el teclado oculte el botón */}
+            <KeyboardAvoidingView
+                style={styles.scrollContainer}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <View style={styles.card}> 
+                        <Text style={styles.title}>Mi Perfil</Text>
+                        
+                        <View style={styles.profileImageContainer}>
+                        
+                            <Image
+                                source={profileImage ? { uri: profileImage } : { uri: 'https://via.placeholder.com/150' }} 
+                                style={styles.profileImage}
+                            />
+                            <TouchableOpacity style={styles.changeImageButton} onPress={pickImage} disabled={isSaving}> 
+                                <FontAwesome name="camera" size={20} color="white" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.formContainer}> 
+                            <Text style={styles.etiqueta}>Nombre</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={firstName} 
+                                onChangeText={setFirstName}
+                                placeholder="Nombre"
+                                autoCapitalize="words" 
+                                editable={!isSaving}
+                            />
+
+                            <Text style={styles.etiqueta}>Apellido</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={lastName} 
+                                onChangeText={setLastName}
+                                placeholder="Apellido" 
+                                autoCapitalize="words"
+                                editable={!isSaving}
+                            />
+
+                            <Text style={styles.etiqueta}>Correo Electrónico</Text> 
+                            <TextInput
+                                style={[styles.input, styles.disabledInput]}
+                                value={email} 
+                                editable={false}
+                            />
+                        </View>
+
+                        {/* Botón Guardar Cambios */} 
+                        <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges} disabled={isSaving}>
+                            {isSaving ? 
+                            (
+                                <ActivityIndicator color="white" /> 
+                            ) : (
+                                <Text style={styles.saveButtonText}>Guardar Cambios</Text> 
+                            )}
                         </TouchableOpacity>
+
+                        {/* Botón Cerrar Sesión */}
+                        <TouchableOpacity 
+                            style={styles.signOutButton} 
+                            onPress={handleSignOut} 
+                            disabled={isSaving} 
+                        >
+                            <FontAwesome name="sign-out" size={20} color="#FF4136" style={{ marginRight: 10 }} /> 
+                            <Text style={styles.signOutButtonText}>Cerrar Sesión</Text>
+                        </TouchableOpacity>
+
                     </View>
-
-                    <View style={styles.formContainer}>
-                        <Text style={styles.etiqueta}>Nombre</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={firstName}
-                            onChangeText={setFirstName}
-                            placeholder="Nombre"
-                            autoCapitalize="words"
-                            editable={!isSaving}
-                        />
-
-                        <Text style={styles.etiqueta}>Apellido</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={lastName}
-                            onChangeText={setLastName}
-                            placeholder="Apellido"
-                            autoCapitalize="words"
-                            editable={!isSaving}
-                        />
-
-                        <Text style={styles.etiqueta}>Correo Electrónico</Text>
-                        <TextInput
-                            style={[styles.input, styles.disabledInput]}
-                            value={email}
-                            editable={false}
-                        />
-                    </View>
-
-                    {/* Botón Guardar Cambios */}
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSaveChanges} disabled={isSaving}>
-                        {isSaving ? (
-                            <ActivityIndicator color="white" />
-                        ) : (
-                            <Text style={styles.saveButtonText}>Guardar Cambios</Text>
-                        )}
-                    </TouchableOpacity>
-
-                    {/* Botón Cerrar Sesión */}
-                    <TouchableOpacity 
-                        style={styles.signOutButton} 
-                        onPress={handleSignOut}
-                        disabled={isSaving} 
-                    >
-                        <FontAwesome name="sign-out" size={20} color="#FF4136" style={{ marginRight: 10 }} />
-                        <Text style={styles.signOutButtonText}>Cerrar Sesión</Text>
-                    </TouchableOpacity>
-
-                </View>
-            </ScrollView>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </LinearGradient>
     );
-}
+} 
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#e4eff9' },
     loadingText: { marginTop: 10, fontSize: 16, color: '#007AFF' },
+    // 🚨 Nuevo estilo para el contenedor de scroll/keyboard
+    scrollContainer: {
+        flex: 1,
+        width: '100%',
+    },
     scrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
@@ -284,7 +375,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#FFFFFF', 
         borderRadius: 15,
         padding: 25,
         width: '100%',
@@ -294,7 +385,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
-        elevation: 5,
+        elevation: 5, 
     },
     title: { fontSize: 28, fontWeight: 'bold', color: '#007AFF', marginBottom: 20 },
     profileImageContainer: {
@@ -306,7 +397,7 @@ const styles = StyleSheet.create({
     profileImage: { width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: '#007AFF' },
     changeImageButton: {
         position: 'absolute',
-        bottom: 5,
+        bottom: 5, 
         right: 5,
         backgroundColor: '#007AFF',
         borderRadius: 20,
@@ -317,7 +408,7 @@ const styles = StyleSheet.create({
     input: {
         width: '100%',
         padding: 12,
-        backgroundColor: '#f0f8ff',
+        backgroundColor: '#f0f8ff', 
         borderRadius: 10,
         borderWidth: 1,
         borderColor: '#007AFF',
@@ -331,11 +422,12 @@ const styles = StyleSheet.create({
         backgroundColor: '#1E90FF',
         paddingVertical: 14,
         paddingHorizontal: 30,
-        borderRadius: 10,
+        borderRadius: 10, 
         width: '100%',
         alignItems: 'center',
     },
-    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    saveButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold', 
+    },
     
     // ESTILOS PARA EL BOTÓN CERRAR SESIÓN
     signOutButton: {
@@ -343,7 +435,7 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         paddingHorizontal: 30,
         borderRadius: 10,
-        width: '100%',
+        width: '100%', 
         alignItems: 'center',
         flexDirection: 'row', 
         justifyContent: 'center',
@@ -354,6 +446,6 @@ const styles = StyleSheet.create({
     signOutButtonText: {
         color: '#FFFFFF', 
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: 'bold', 
     },
 });
