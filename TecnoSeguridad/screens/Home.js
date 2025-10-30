@@ -20,7 +20,7 @@ import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc,
 import { FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// 🚨 DEFINICIÓN GLOBAL DE CONSTANTES DEL CARRUSEL
+//  DEFINICIÓN GLOBAL DE CONSTANTES DEL CARRUSEL
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = 150; 
 const ITEM_MARGIN = 15; 
@@ -104,7 +104,7 @@ const FeaturedProductItem = memo(({ item, navigation }) => (
 ));
 
 
-// 🚨 NUEVO COMPONENTE: TARJETA DE RESULTADOS DE ENCUESTA
+// NUEVO COMPONENTE: TARJETA DE RESULTADOS DE ENCUESTA
 const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
     const [userVotedOption, setUserVotedOption] = useState(null);
     const [results, setResults] = useState(null);
@@ -259,7 +259,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
             );
         }
 
-        // 🚨 OPCIÓN 2: TILES DE PORCENTAJE (Para 3+ opciones, como alternativa visual)
+        // OPCIÓN 2: TILES DE PORCENTAJE (Para 3+ opciones, como alternativa visual)
         return (
             <View>
                 <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
@@ -304,7 +304,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
                 </View>
 
             ) : (
-                // 🚨 RENDERIZADO DE RESULTADOS
+                // RENDERIZADO DE RESULTADOS
                 results ? (
                     renderResults()
                 ) : (
@@ -322,7 +322,7 @@ export default function Home({ navigation }) {
     const flatListRef = useRef(null); 
     const [currentIndex, setCurrentIndex] = useState(0); 
 
-    // 🚨 DEFINICIÓN DE LOS ESTADOS PRINCIPALES Y ALERTAS
+    // DEFINICIÓN DE LOS ESTADOS PRINCIPALES Y ALERTAS
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
     const [profileImage, setProfileImage] = useState(null);
@@ -332,7 +332,7 @@ export default function Home({ navigation }) {
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [loopedProducts, setLoopedProducts] = useState([]);
 
-    // 🚨 DEFINICIÓN DE showAlert y hideAlert (CORRECCIÓN DE ALCANCE)
+    // DEFINICIÓN DE showAlert y hideAlert (CORRECCIÓN DE ALCANCE)
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
         setIsAlertVisible(true);
@@ -398,7 +398,7 @@ export default function Home({ navigation }) {
 
             setFeaturedProducts(productsList);
 
-            // 🚨 CREACIÓN DEL BUCLE: Duplicamos la lista para simular un carrusel continuo
+            // CREACIÓN DEL BUCLE: Duplicamos la lista para simular un carrusel continuo
             if (productsList.length > 0) {
                 // Duplicamos 10 veces para dar espacio al loop sin que se vea el final
                 const loopList = [...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList].map((item, index) => ({
@@ -427,7 +427,7 @@ export default function Home({ navigation }) {
     }, [navigation, fetchData]);
 
 
-    // 🚨 EFECTO PARA EL DESPLAZAMIENTO AUTOMÁTICO
+    // EFECTO PARA EL DESPLAZAMIENTO AUTOMÁTICO
     useEffect(() => {
         if (loopedProducts.length === 0) return;
 
@@ -516,7 +516,7 @@ export default function Home({ navigation }) {
             </View>
 
             {isMenuVisible && (
-                // 🚨 MENÚ DESPLEGABLE CON ESTILOS RESTAURADOS
+                // MENÚ DESPLEGABLE CON ESTILOS RESTAURADOS
                 <View style={styles.profileMenu}>
                     <View style={styles.menuHeader}>
                         <Text style={styles.menuName}>{userName}</Text>
@@ -577,7 +577,7 @@ export default function Home({ navigation }) {
                             snapToAlignment="start"
                             snapToInterval={SNAP_WIDTH} 
                             contentContainerStyle={styles.carouselContainer}
-                            // 🚨 PROPIEDAD PARA OPTIMIZACIÓN
+                            // PROPIEDAD PARA OPTIMIZACIÓN
                             getItemLayout={(data, index) => ({
                                 length: SNAP_WIDTH,
                                 offset: SNAP_WIDTH * index,
@@ -593,8 +593,8 @@ export default function Home({ navigation }) {
 
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Encuestas</Text>
-                    
-                    {/* 🚨 ENCUESTA 1: TEAM CPU (Barra Segmentada) */}
+
+                    {/* ENCUESTA 1: TEAM CPU (Barra Segmentada) */}
                     <InteractiveSurvey 
                         surveyId="cpu_team"
                         question="¿Eres Team AMD o Team Intel?"
