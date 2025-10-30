@@ -20,6 +20,7 @@ import { signOut } from 'firebase/auth';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
+
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
@@ -73,6 +74,7 @@ const customAlertStyles = StyleSheet.create({
 });
 
 // Componente CustomHeader 
+// Componente CustomHeader 
 const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfilePress, profileImage }) => {
     const renderProfileAvatar = () => {
         if (profileImage) {
@@ -80,8 +82,8 @@ const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfil
                 <Image source={{ uri: profileImage }} style={styles.profileImage} />
             );
         } else {
-            return ( 
-                <FontAwesome name="user-circle" size={35} color="#007AFF" /> 
+            return (
+                <FontAwesome name="user-circle" size={45} color="#007AFF" /> // Usamos el tamaño del style.profileImage
             );
         }
     };
@@ -138,7 +140,7 @@ export default function Productos({ navigation }) {
     const [isLoading, setIsLoading] = useState(true);
     const [products, setProducts] = useState([]); 
     
-    // Estados para alertas 
+    // Estados para alertas (Aunque no se usan activamente en esta vista, se mantienen por consistencia)
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
     const showAlert = (title, message, type = 'error') => {
@@ -149,21 +151,8 @@ export default function Productos({ navigation }) {
         setIsAlertVisible(false);
     };
 
-    // ----------------------------------------------------
-    // FUNCIÓN PARA CERRAR SESIÓN
-    const handleLogOut = async () => {
-        try {
-            await signOut(auth);
-            setIsMenuVisible(false); 
-            showAlert("Sesión cerrada", "Has cerrado sesión correctamente.", 'success');
-        } catch (error) {
-            console.error("Error al cerrar sesión:", error);
-            showAlert("Error", "Hubo un problema al cerrar sesión.");
-        }
-    };
-    // ----------------------------------------------------
 
-    // FUNCIÓN DE CARGA DE DATOS 
+    // 🚨 FUNCIÓN DE CARGA DE DATOS (Memoizada)
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -194,6 +183,7 @@ export default function Productos({ navigation }) {
         }
     }, []);
 
+    // 🚨 LÓGICA DE ACTUALIZACIÓN AL ENFOCAR LA PANTALLA
     useEffect(() => {
         fetchData(); 
         const unsubscribe = navigation.addListener('focus', () => {
@@ -304,6 +294,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8f8f8',
+        // 🚨 SOLUCIÓN PARA EVITAR SUPERPOSICIÓN DE NOTIFICACIONES EN ANDROID
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     loadingContainer: {

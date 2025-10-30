@@ -20,16 +20,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AgregarProducto from './AgregarProducto'; 
 
-// --- Variables de color ajustadas ---
+// --- Variables de colores ---
 const RED_COLOR = '#FF4136';
 const GREEN_COLOR = '#4CAF50';
 const BLUE_COLOR = '#007AFF'; // Color principal
 const YELLOW_COLOR = '#FFC107';
 
-
-// ... (CustomAlert y ConfirmationModal permanecen iguales) ...
-
-// 🚨 Componente CustomAlert (AÑADIDO)
+// Componente CustomAlert
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? GREEN_COLOR : RED_COLOR;
@@ -82,7 +79,7 @@ const modalCommonStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// Componente CustomHeader (reutilizado)
+// Componente CustomHeader
 const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
     const renderProfileAvatar = () => {
         if (profileImage) {
@@ -114,7 +111,7 @@ const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
 
 // Componente para una tarjeta de producto en modo Admin
 const AdminProductCard = ({ product, onEditPress, onDeletePress, onToggleFeatured }) => {
-    const isFeatured = product.isFeatured || false; // Asegurar que el estado exista
+    const isFeatured = product.isFeatured || false; 
     return (
         <View style={styles.productCard}>
             
@@ -186,7 +183,7 @@ export default function AdminProductos({ navigation }) {
                 id: doc.id,
                 ...doc.data(),
                 stock: doc.data().stock !== undefined ? doc.data().stock : 'N/A',
-                isFeatured: doc.data().isFeatured || false, // 🚨 Obtener el estado destacado
+                isFeatured: doc.data().isFeatured || false, // Obtener el estado destacado
             }));
             setProducts(productsList);
 
@@ -236,7 +233,7 @@ export default function AdminProductos({ navigation }) {
         );
     };
     
-    // 🚨 FUNCIÓN PARA MARCAR/DESMARCAR COMO DESTACADO
+    // FUNCIÓN PARA MARCAR/DESMARCAR COMO DESTACADO
     const handleToggleFeatured = async (product) => {
         const newFeaturedState = !product.isFeatured;
         try {
@@ -365,7 +362,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingVertical: 8, // 🚨 REDUCIDO EL PADDING VERTICAL
+        paddingVertical: 8, // REDUCIDO EL PADDING VERTICAL
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
@@ -374,17 +371,17 @@ const styles = StyleSheet.create({
         padding: 5,
     },
     backButtonPlaceholder: {
-        width: 35, // Ajustado para centrar el título
+        width: 35, // Centrar el título
     },
     headerTitle: {
-        fontSize: 17, // 🚨 REDUCIDO EL TAMAÑO DEL TÍTULO
+        fontSize: 17, // REDUCIDO EL TAMAÑO DEL TÍTULO
         fontWeight: 'bold',
         color: BLUE_COLOR,
         flex: 1,
         textAlign: 'center',
     },
     profileImage: {
-        width: 35, // 🚨 AUMENTADO EL TAMAÑO DE LA FOTO
+        width: 35, // AUMENTADO EL TAMAÑO DE LA FOTO
         height: 35, 
         borderRadius: 17.5,
         borderWidth: 1,

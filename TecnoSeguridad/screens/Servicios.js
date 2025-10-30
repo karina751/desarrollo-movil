@@ -13,7 +13,8 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { signOut } from 'firebase/auth'; 
+
+// IMPORTACIONES DE FIREBASE
 import { doc, getDoc } from 'firebase/firestore'; 
 import { auth, db } from '../src/config/firebaseConfig'; 
 
@@ -23,7 +24,7 @@ const IMG_REPARACION = require('../assets/reparacion_pc.png.jpeg');
 
 const BLUE_COLOR = '#007AFF';
 
-
+// --- Estructura de datos de tus servicios fijos ---
 const FIXED_SERVICES = [
     {
         id: 'camaras',
@@ -44,6 +45,38 @@ const FIXED_SERVICES = [
         imageSource: IMG_REPARACION, 
     },
 ];
+
+
+// Componente CustomHeader 
+const CustomHeader = ({ navigation, title, profileImage }) => {
+    // 🚨 Renderiza la imagen cargada o el ícono grande
+    const renderProfileAvatar = () => {
+        if (profileImage) {
+            return (
+                <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            );
+        } else {
+            // Ícono de usuario de 35px si no hay imagen
+            return <FontAwesome name="user-circle" size={35} color={BLUE_COLOR} />; 
+        }
+    };
+
+    return (
+        <View style={styles.header}>
+            {/* Botón de volver (Home es el inicio, así que volvemos atrás en el stack) */}
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                <FontAwesome name="chevron-left" size={24} color={BLUE_COLOR} />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>{title}</Text>
+
+            <TouchableOpacity onPress={() => navigation.navigate('Perfil')} style={styles.profileButton}>
+                {renderProfileAvatar()}
+            </TouchableOpacity>
+        </View>
+    );
+};
+
 
 // Componente para mostrar una tarjeta de servicio
 const ServiceCard = ({ service }) => {
@@ -97,7 +130,7 @@ export default function Servicios({ navigation }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isMenuVisible, setIsMenuVisible] = useState(false); 
 
-    // Cargar datos del usuario al inicio
+    // 🚨 LÓGICA PARA CARGAR LA IMAGEN DE PERFIL
     useEffect(() => {
         const fetchUserData = async () => {
             if (auth.currentUser) {
@@ -139,30 +172,9 @@ export default function Servicios({ navigation }) {
             {/* Header */}
             <CustomHeader
                 title="Nuestros Servicios"
-                onProfilePress={() => setIsMenuVisible(!isMenuVisible)} 
-                profileImage={profileImage} 
+                profileImage={profileImage} // 🚨 Pasamos la imagen al header
             />
             
-            {/* Menú desplegable */}
-            {isMenuVisible && (
-                <View style={styles.profileMenu}>
-                    <View style={styles.menuHeader}>
-                        <Text style={styles.menuName}>{userName}</Text>
-                    </View>
-                    <TouchableOpacity style={styles.menuItem} onPress={() => {
-                        setIsMenuVisible(false);
-                        navigation.navigate('Perfil');
-                    }}>
-                        <FontAwesome name="user" size={20} color={BLUE_COLOR} style={{ marginRight: 10 }} />
-                        <Text style={styles.menuText}>Mi Perfil</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogOut}>
-                        <FontAwesome name="sign-out" size={20} color="#FFF" style={{ marginRight: 10 }} />
-                        <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-                    </TouchableOpacity>
-                </View>
-            )}
-
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Text style={styles.sectionTitle}>Servicios Destacados</Text>
                 
@@ -187,6 +199,8 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f0f4f7', 
+        // 🚨 SOLUCIÓN PARA EVITAR SUPERPOSICIÓN DE NOTIFICACIONES EN ANDROID
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0, 
     },
     loadingContainer: {
         flex: 1,
@@ -204,28 +218,32 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingBottom: 8,
+        paddingVertical: 5, // 🚨 REDUCIDO EL PADDING VERTICAL
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         zIndex: 10, 
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 17, // 🚨 REDUCIDO TAMAÑO DEL TÍTULO
         fontWeight: 'bold',
         color: BLUE_COLOR,
         flex: 1,
         textAlign: 'center',
     },
+    backButton: {
+        padding: 5,
+        width: 35, // Para mantener el espacio
+    },
     profileButton: {
         padding: 5,
-        width: 40, 
+        width: 35, // Para mantener el espacio
         alignItems: 'flex-end',
     },
-    profileImage: { 
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+    profileImage: {
+        width: 35, // 🚨 TAMAÑO DE LA IMAGEN DE PERFIL
+        height: 35, 
+        borderRadius: 17.5,
         borderWidth: 1,
         borderColor: BLUE_COLOR,
     },

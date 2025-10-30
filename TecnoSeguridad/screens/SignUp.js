@@ -12,18 +12,18 @@ import {
     Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { auth, db } from '../src/config/firebaseConfig'; // Instancia de Auth y Firestore
-import { createUserWithEmailAndPassword } from 'firebase/auth'; // Función para crear usuario
-import { doc, setDoc } from 'firebase/firestore'; // Función para guardar datos en Firestore
-import { LinearGradient } from 'expo-linear-gradient'; // Fondo con gradiente
+import { auth, db } from '../src/config/firebaseConfig'; 
+import { createUserWithEmailAndPassword } from 'firebase/auth'; 
+import { doc, setDoc } from 'firebase/firestore'; 
+import { LinearGradient } from 'expo-linear-gradient'; 
 
 
 // Componente CustomAlert: Modal de alerta con ícono y color dinámico.
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
-    // Definir colores e íconos para retroalimentación (solo estos cambian)
+    
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; // Verde o Rojo
-    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Check o Triángulo
+    const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; 
 
     return (
         <Modal
@@ -85,7 +85,7 @@ const PasswordRequirements = ({ hasUppercase, hasLowercase, hasNumber, hasMinLen
 };
 
 
-// Estilos específicos para el Custom Alert (MODIFICADOS)
+// Estilos específicos para el Custom Alert 
 const customAlertStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -111,13 +111,13 @@ const customAlertStyles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
     },
-    // Estilo base para el título (siempre azul)
+    // Estilo base para el título
     alertTitleBase: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#007AFF',
     },
-    // Estilo base para el mensaje (color neutral)
+    // Estilo base para el mensaje
     alertMessageBase: {
         fontSize: 15,
         color: '#555',
@@ -130,7 +130,7 @@ const customAlertStyles = StyleSheet.create({
         paddingHorizontal: 20,
         width: '100%',
         alignItems: 'center',
-        // El color de fondo se aplica dinámicamente
+        // El color de fondo 
     },
     alertButtonText: {
         color: 'white',
