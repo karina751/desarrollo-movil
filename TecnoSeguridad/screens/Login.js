@@ -301,6 +301,7 @@ export default function Login({ navigation }) {
                             keyboardType="email-address"
                             autoCapitalize="none"
                             autoCorrect={false}
+                            maxLength={25}
                         />
                     </View>
                     
@@ -315,6 +316,7 @@ export default function Login({ navigation }) {
                             onChangeText={setPassword}
                             secureTextEntry={!showPassword} // Oculta/muestra el texto
                             autoCorrect={false}
+                            maxLength={25}
                         />
                         {/* Botón para mostrar/ocultar contraseña */}
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>

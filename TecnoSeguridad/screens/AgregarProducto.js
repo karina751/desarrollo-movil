@@ -22,7 +22,7 @@ import {
     ScrollView, 
     KeyboardAvoidingView, 
     Platform,
-    Alert, // Se mantiene, aunque el selector de imagen personalizado no lo usa
+    Alert, // Se mantiene para permisos o errores nativos
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 // Importamos funciones de Firestore para agregar y actualizar documentos.
@@ -304,7 +304,6 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
     
     /**
      * Función que maneja el guardado o actualización del producto en Firestore.
-     * La URL de la imagen (imageURL) debe existir antes de llamar a esta función.
      */
     const handleSaveProduct = async () => {
         Keyboard.dismiss();
@@ -369,7 +368,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
     
-    // URL utilizada para la vista previa de la imagen (local si se acaba de seleccionar, o la final si ya está guardada).
+    // URL utilizada para la vista previa de la imagen.
     const previewUrl = localImageUri || imageURL;
 
     return (
@@ -419,22 +418,55 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
 
                                 <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
           
-                                    {/* Campos del Formulario (Nombre, Categoría, Precio, Stock) */}
+                                    {/* Campo Nombre del Producto */}
                                     <Text style={styles.label}>Nombre del Producto</Text>
-                                    <TextInput /* ... */ />
+                                    <TextInput 
+                                        style={styles.input}
+                                        placeholder="Ej. Teclado mecánico RGB"
+                                        value={productName}
+                                        onChangeText={setProductName}
+                                        maxLength={50} 
+                                        placeholderTextColor={BLUE_COLOR_SOFT}
+                                    />
 
+                                    {/* Campo Categoría */}
                                     <Text style={styles.label}>Categoría</Text>
-                                    <TextInput /* ... */ />
+                                    <TextInput 
+                                        style={styles.input}
+                                        placeholder="Ej. Gaming, Electrónica"
+                                        value={category}
+                                        onChangeText={setCategory}
+                                        maxLength={20} 
+                                        placeholderTextColor={BLUE_COLOR_SOFT}
+                                    />
 
                                     <View style={styles.row}>
+                                        {/* Campo Precio */}
                                         <View style={styles.halfWidth}>
                                             <Text style={styles.label}>Precio</Text>
-                                            <TextInput /* ... */ />
+                                            <TextInput 
+                                                style={styles.input}
+                                                placeholder="Ej. 75000"
+                                                value={price}
+                                                onChangeText={setPrice}
+                                                keyboardType="numeric"
+                                                maxLength={20} 
+                                                placeholderTextColor={BLUE_COLOR_SOFT}
+                                            />
                                         </View>
                         
+                                        {/* Campo Stock */}
                                         <View style={styles.halfWidth}>
                                             <Text style={styles.label}>Stock</Text>
-                                            <TextInput /* ... */ />
+                                            <TextInput 
+                                                style={styles.input}
+                                                placeholder="Ej. 25"
+                                                value={stock}
+                                                onChangeText={setStock}
+                                                keyboardType="numeric"
+                                                maxLength={5} 
+                                                placeholderTextColor={BLUE_COLOR_SOFT}
+                                            />
                                         </View>
                      
                                     </View>
@@ -551,6 +583,7 @@ const styles = StyleSheet.create({
         marginBottom: 5,
         marginTop: 10,
     },
+    // Estilo del input (con bordes visibles)
     input: {
         borderWidth: 1,
         borderColor: '#ddd',
@@ -559,7 +592,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         fontSize: 16,
         marginBottom: 10,
-        color: BLUE_COLOR_SOFT,
+        color: BLUE_COLOR_SOFT, // Color del texto
         backgroundColor: '#f9f9f9',
     },
     row: {

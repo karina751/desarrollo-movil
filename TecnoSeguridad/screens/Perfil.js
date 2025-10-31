@@ -404,6 +404,7 @@ export default function Perfil() {
                                 placeholder="Nombre"
                                 autoCapitalize="words" 
                                 editable={!isSaving}
+                                maxLength={20}
                             />
 
                             {/* Campo Apellido */}
@@ -415,6 +416,7 @@ export default function Perfil() {
                                 placeholder="Apellido" 
                                 autoCapitalize="words"
                                 editable={!isSaving}
+                                maxLength={20}
                             />
 
                             {/* Campo Correo (Deshabilitado) */}

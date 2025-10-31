@@ -376,6 +376,7 @@ export default function SignUp({ navigation }) {
                                 onChangeText={validateFirstName}
                                 autoCapitalize="words"
                                 keyboardType="default"
+                                maxLength={20}
                             />
                         </View>
                         {firstNameError ? <Text style={styles.textoError}>{firstNameError}</Text> : null}
@@ -392,6 +393,7 @@ export default function SignUp({ navigation }) {
                                 onChangeText={validateLastName}
                                 autoCapitalize="words"
                                 keyboardType="default"
+                                maxLength={20}
                             />
                         </View>
                         {lastNameError ? <Text style={styles.textoError}>{lastNameError}</Text> : null}
@@ -408,6 +410,7 @@ export default function SignUp({ navigation }) {
                                 onChangeText={setEmail}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                maxLength={25}
                             />
                         </View>
 
@@ -421,6 +424,7 @@ export default function SignUp({ navigation }) {
                                 value={password}
                                 onChangeText={validatePassword}
                                 secureTextEntry={!showPassword}
+                                maxLength={25}
                             />
                             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                 <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
@@ -447,6 +451,7 @@ export default function SignUp({ navigation }) {
                                 value={confirmPassword}
                                 onChangeText={validateConfirmPassword}
                                 secureTextEntry={!showConfirmPassword}
+                                maxLength={25}
                             />
                             <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                                 <FontAwesome name={showConfirmPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
