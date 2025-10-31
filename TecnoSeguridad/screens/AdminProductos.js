@@ -1,4 +1,3 @@
-// Archivo: AdminProductos.js - CÓDIGO FINAL Y CORREGIDO
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, 
@@ -12,26 +11,31 @@ import {
     ActivityIndicator,
     Platform,
     StatusBar,
-    Alert, 
+    Alert, // Se usa para pedir permisos o manejar errores nativos
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+// Importamos las funciones de Firestore para interactuar con la base de datos.
 import { doc, getDoc, collection, getDocs, deleteDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../src/config/firebaseConfig';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AgregarProducto from './AgregarProducto';
 
-// --- Variables de color ajustadas ---
-const RED_COLOR = '#FF4136'; // Rojo para eliminar
+// --- Variables de color globales ---
+const RED_COLOR = '#FF4136'; 
 const GREEN_COLOR = '#4CAF50';
 const BLUE_COLOR = '#007AFF';
-const YELLOW_COLOR = '#FFC107';
+const YELLOW_COLOR = '#FFC107'; 
 
 
-// 🚨 Componente CustomAlert (Reutilizado)
+// --- Componentes de Feedback y Modales ---
+
+/**
+ * CustomAlert: Modal de alerta personalizado.
+ * Muestra el resultado de operaciones (éxito o error) con íconos y colores definidos.
+ */
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
-    // 🚨 LÍNEA CORREGIDA (Sin la citación que causaba el error de sintaxis)
     const feedbackColor = isSuccess ? GREEN_COLOR : RED_COLOR;
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
     return (
@@ -42,8 +46,7 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             onRequestClose={onClose}
         >
             <View style={modalCommonStyles.modalContainer}>
-                <View style={[modalCommonStyles.alertBox, { borderColor: feedbackColor, borderWidth: 
-2 }]}>
+                <View style={[modalCommonStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
                     <View style={modalCommonStyles.headerContainer}>
                          <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
                          <Text style={[modalCommonStyles.alertTitleBase, { color: feedbackColor }]}>{title}</Text>
@@ -64,7 +67,10 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
     );
 };
 
-// 🚨 NUEVO COMPONENTE: MODAL DE CONFIRMACIÓN (Eliminación)
+/**
+ * ConfirmationModal: Modal personalizado de confirmación.
+ * Se utiliza para operaciones destructivas (eliminar), reemplazando el Alert nativo.
+ */
 const ConfirmationModal = ({ isVisible, title, message, onConfirm, onCancel }) => {
     return (
         <Modal
@@ -102,6 +108,7 @@ const ConfirmationModal = ({ isVisible, title, message, onConfirm, onCancel }) =
 };
 
 
+// Estilos comunes para los modales
 const modalCommonStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
     alertBox: {
@@ -125,8 +132,12 @@ const modalCommonStyles = StyleSheet.create({
 });
 
 
-// 🎯 COMPONENTE CustomHeader (CON CORRECCIÓN DE NAVEGACIÓN A PERFIL)
+/**
+ * CustomHeader: Encabezado de la pantalla.
+ * Muestra el título, el botón de retroceso y el avatar del usuario con navegación anidada.
+ */
 const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
+    // Decide si mostrar la foto de perfil real o un ícono genérico.
     const renderProfileAvatar = () => {
         if (profileImage) {
             return (
@@ -141,15 +152,15 @@ const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
     
     return (
         <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10 }]}>
+            {/* Botón de retroceso */}
             <TouchableOpacity onPress={onBackPress || (() => navigation.goBack())} style={styles.backButton}>
                 <FontAwesome name="chevron-left" size={24} color={BLUE_COLOR} />
             </TouchableOpacity>
             
-           
              <Text style={styles.headerTitle}>{title}</Text>
 
+            {/* Navegación anidada al perfil: Va a HomeTabs y luego a la pantalla Perfil. */}
             <TouchableOpacity 
-                // 🚨 CORRECCIÓN: NAVEGACIÓN ANIDADA A PERFIL 
                 onPress={() => navigation.navigate('HomeTabs', { screen: 'Perfil' })} 
             >
                 {renderProfileAvatar()}
@@ -159,25 +170,25 @@ const CustomHeader = ({ navigation, title, onBackPress, profileImage }) => {
 };
 
 
-// Componente para una tarjeta de producto en modo Admin
+/**
+ * AdminProductCard: Tarjeta que presenta un producto individual en la lista de administración.
+ * Contiene botones para editar, eliminar y cambiar el estado "destacado".
+ */
 const AdminProductCard = ({ product, onEditPress, onDeletePress, onToggleFeatured }) => {
-    const isFeatured = product.isFeatured ||
-false;
+    const isFeatured = product.isFeatured || false;
     return (
         <View style={styles.productCard}>
             
-            {/* Botón de Destacado (Flotante) */}
+            {/* Botón para marcar/desmarcar como Destacado */}
             <TouchableOpacity 
                 style={styles.featuredButton}
                 onPress={() => onToggleFeatured(product)}
-    
              >
                 <FontAwesome 
                     name={isFeatured ? "star" : "star-o"} 
                     size={20} 
                     color={isFeatured ? YELLOW_COLOR : '#fff'} 
-    
-             />
+                 />
             </TouchableOpacity>
 
             <Image 
@@ -185,18 +196,18 @@ false;
                 style={styles.productImage} 
             />
        
-         <View style={styles.productInfo}>
+            <View style={styles.productInfo}>
                 <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
                 <Text style={styles.productCategory}>{product.category}</Text>
                 <Text style={styles.productPrice}>${product.price}</Text>
                 <Text style={styles.productStock}>Stock: {product.stock}</Text>
                 <View style={styles.productActions}>
-       
-                     <TouchableOpacity style={[styles.actionButton, styles.editButton]} onPress={() => onEditPress(product)}>
+                    {/* Botón de Editar */}
+                    <TouchableOpacity style={[styles.actionButton, styles.editButton]} onPress={() => onEditPress(product)}>
                         <FontAwesome name="pencil" size={16} color="#FFF" />
                     </TouchableOpacity>
+                    {/* Botón de Eliminar */}
                     <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={() => onDeletePress(product.id)}>
-         
                         <FontAwesome name="trash" size={16} color="#FFF" />
                     </TouchableOpacity>
                 </View>
@@ -205,27 +216,34 @@ false;
     );
 };
 
+// --- COMPONENTE PRINCIPAL DE PANTALLA ---
 export default function AdminProductos({ navigation }) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [profileImage, setProfileImage] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [products, setProducts] = useState([]);
-    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-    const [productToEdit, setProductToEdit] = useState(null);
+    // --- ESTADOS DE LA VISTA Y DATOS ---
+    const [searchQuery, setSearchQuery] = useState(''); // Texto de búsqueda
+    const [profileImage, setProfileImage] = useState(null); 
+    const [isLoading, setIsLoading] = useState(true); // Controla la carga
+    const [products, setProducts] = useState([]); // Lista de productos
+    const [isAddModalVisible, setIsAddModalVisible] = useState(false); // Modal Agregar/Editar
+    const [productToEdit, setProductToEdit] = useState(null); 
 
-    const [isResultVisible, setIsResultVisible] = useState(false);
+    const [isResultVisible, setIsResultVisible] = useState(false); // Visibilidad del CustomAlert
     const [resultData, setResultData] = useState({ title: '', message: '', type: 'error' });
     
-    // 🚨 Nuevo estado para el modal de confirmación de eliminación
+    // Estados para la confirmación de eliminación
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
     const [productIdToDelete, setProductIdToDelete] = useState(null);
 
 
+    // Muestra la alerta personalizada de feedback (CustomAlert).
     const showAlert = (title, message, type = 'error') => {
         setResultData({ title, message, type });
         setIsResultVisible(true);
     };
 
+    /**
+     * Función que obtiene el avatar del usuario y carga la lista de productos desde Firestore.
+     * Esta función es llamada al inicio y después de cada cambio importante.
+     */
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -239,15 +257,13 @@ export default function AdminProductos({ navigation }) {
                 }
             }
 
-            // 2. Obtener productos de Firestore
+            // 2. Obtener productos
             const productsCollection = collection(db, 'products');
-  
-           const productsSnapshot = await getDocs(productsCollection);
+            const productsSnapshot = await getDocs(productsCollection);
             const productsList = productsSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
                 stock: doc.data().stock !== undefined ? doc.data().stock : 'N/A',
-             
                 isFeatured: doc.data().isFeatured || false,
             }));
             setProducts(productsList);
@@ -259,6 +275,7 @@ export default function AdminProductos({ navigation }) {
         }
     }, []);
 
+    // Hook para cargar datos al inicio y al enfocar la pantalla.
     useEffect(() => {
         fetchData();
         const unsubscribe = navigation.addListener('focus', () => {
@@ -267,25 +284,29 @@ export default function AdminProductos({ navigation }) {
         return unsubscribe;
     }, [navigation, fetchData]);
     
+    // Configura el modal para editar.
     const handleEdit = (product) => {
         setProductToEdit(product);
         setIsAddModalVisible(true);
     };
     
-    // 🚨 Función para abrir el modal de confirmación (pregunta)
+    // Función que prepara la eliminación: guarda el ID y muestra el modal de confirmación.
     const handleConfirmDelete = (id) => {
         setProductIdToDelete(id);
         setIsDeleteModalVisible(true);
     }
     
-    // 🚨 Función que ejecuta la eliminación real
+    /**
+     * Ejecuta la eliminación real del producto en Firestore.
+     * Se llama al presionar el botón 'Eliminar' en el ConfirmationModal.
+     */
     const handleDelete = async () => {
-        setIsDeleteModalVisible(false); // Cierra el modal de confirmación
-        if (!productIdToDelete) return;
+        setIsDeleteModalVisible(false); // Cierra el modal
+        if (!productIdToDelete) return; 
 
         try {
            await deleteDoc(doc(db, 'products', productIdToDelete));
-            fetchData();
+            fetchData(); // Recarga la lista
             showAlert("Eliminado", "Producto eliminado correctamente.", 'success');
             setProductIdToDelete(null);
         } catch (error) {
@@ -294,7 +315,7 @@ export default function AdminProductos({ navigation }) {
         }
     };
     
-    // FUNCIÓN PARA MARCAR/DESMARCAR COMO DESTACADO
+    // Función para cambiar el estado 'Destacado' de un producto en Firestore.
     const handleToggleFeatured = async (product) => {
         const newFeaturedState = !product.isFeatured;
         try {
@@ -313,15 +334,21 @@ export default function AdminProductos({ navigation }) {
             showAlert("Error", "No se pudo actualizar el estado Destacado.", 'error');
         }
     };
+    
+    // Cierra el modal Agregar/Editar y actualiza la lista.
     const handleCloseModal = () => {
         setProductToEdit(null);
         setIsAddModalVisible(false);
         fetchData();
     };
+    
+    // Filtra la lista de productos basada en la búsqueda.
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // Muestra la pantalla de carga si los datos no están listos.
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -333,17 +360,16 @@ export default function AdminProductos({ navigation }) {
 
     return (
         <View style={styles.container}>
-            {/* MODAL DE RESULTADO (Éxito/Error) */}
+            {/* Modal de Feedback */}
             <CustomAlert
                 isVisible={isResultVisible}
                 title={resultData.title}
                 message={resultData.message}
-         
                onClose={() => setIsResultVisible(false)}
                 type={resultData.type}
             />
 
-            {/* 🚨 MODAL DE CONFIRMACIÓN DE ELIMINACIÓN */}
+            {/* Modal de Confirmación de Eliminación */}
             <ConfirmationModal
                 isVisible={isDeleteModalVisible}
                 title="Confirmar Eliminación"
@@ -356,7 +382,6 @@ export default function AdminProductos({ navigation }) {
             <CustomHeader
                 navigation={navigation}
                 title="Administración de Productos"
-   
                 onBackPress={() => navigation.goBack()}
                 profileImage={profileImage}
             />
@@ -364,34 +389,29 @@ export default function AdminProductos({ navigation }) {
             {/* Barra de Búsqueda */}
             <View style={styles.searchBarContainer}>
                 <FontAwesome name="search" size={20} color="#888" style={styles.searchIcon} />
-       
                  <TextInput
                     style={styles.searchInput}
                     placeholder="Buscar productos..."
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-          
                 />
             </View>
 
-            {/* Galería de Productos */}
+            {/* Galería de Productos (Lista) */}
             <ScrollView contentContainerStyle={styles.productsGrid}>
                 {filteredProducts.length > 0 ?
                 (
                     filteredProducts.map(product => (
                         <AdminProductCard
                             key={product.id}
-                          
                             product={product}
                             onEditPress={handleEdit}
-                            onDeletePress={handleConfirmDelete} // 🚨 Llama a la confirmación
+                            onDeletePress={handleConfirmDelete} 
                             onToggleFeatured={handleToggleFeatured}
-      
                         />
                     ))
                 ) : (
                     <Text style={styles.noProductsText}>No hay productos registrados. Usa el botón '+' para agregar.</Text>
-              
                 )}
             </ScrollView>
 
@@ -407,7 +427,6 @@ export default function AdminProductos({ navigation }) {
             {/* Modal para Agregar/Editar Producto */}
             <AgregarProducto 
                 isVisible={isAddModalVisible}
-        
                 onClose={handleCloseModal}
                 onProductAdded={handleCloseModal}
                 productToEdit={productToEdit}
@@ -416,6 +435,7 @@ export default function AdminProductos({ navigation }) {
     );
 }
 
+// --- ESTILOS ---
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -429,7 +449,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#e4eff9',
     },
     loadingText: {
-     
         marginTop: 10,
         fontSize: 16,
         color: BLUE_COLOR,
@@ -455,7 +474,6 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: 'bold',
         color: BLUE_COLOR,
-      
         flex: 1,
         textAlign: 'center',
     },
@@ -468,7 +486,6 @@ const styles = StyleSheet.create({
     },
     searchBarContainer: {
         flexDirection: 'row',
-       
         alignItems: 'center',
         backgroundColor: '#fff',
         borderRadius: 10,
@@ -480,7 +497,6 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
-   
         shadowRadius: 2,
         elevation: 2,
     },
@@ -495,7 +511,6 @@ const styles = StyleSheet.create({
     },
     productsGrid: {
         flexDirection: 'row',
-    
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         paddingHorizontal: 15,
@@ -507,7 +522,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         marginBottom: 15,
         shadowColor: '#000',
-        
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -519,7 +533,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 120,
         resizeMode: 'cover',
-    
         borderTopLeftRadius: 10,
         borderTopRightRadius: 10,
     },
@@ -534,7 +547,6 @@ const styles = StyleSheet.create({
     },
     productCategory: {
         fontSize: 12,
-     
         color: '#888',
         marginBottom: 5,
     },
@@ -549,7 +561,6 @@ const styles = StyleSheet.create({
         color: '#888',
         marginBottom: 5,
     },
-  
     productActions: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -562,7 +573,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         flex: 1,
-       
         marginHorizontal: 2,
     },
     editButton: {
@@ -578,7 +588,6 @@ const styles = StyleSheet.create({
     },
     addButton: {
         position: 'absolute',
-        
         bottom: 20, 
         right: 20,
         backgroundColor: BLUE_COLOR,
@@ -590,7 +599,6 @@ const styles = StyleSheet.create({
         shadowColor: BLUE_COLOR,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
-   
         shadowRadius: 5,
         elevation: 5,
     },
@@ -602,7 +610,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
         padding: 5,
         borderRadius: 15,
-   
     },
     noProductsText: {
         fontSize: 16,
@@ -611,7 +618,7 @@ const styles = StyleSheet.create({
         marginTop: 50,
         width: '100%',
     },
-    // 🚨 ESTILOS PARA EL MODAL DE CONFIRMACIÓN
+    // Estilos para el modal de confirmación
     confirmationButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',

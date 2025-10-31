@@ -11,19 +11,20 @@ import {
     ActivityIndicator, 
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native'; // Hook para obtener la función de navegación
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { signOut } from 'firebase/auth'; 
-import { doc, getDoc } from 'firebase/firestore'; 
-import { auth, db } from '../src/config/firebaseConfig'; 
+import { signOut } from 'firebase/auth'; // Función para cerrar sesión
+import { doc, getDoc } from 'firebase/firestore'; // Funciones para leer datos de Firestore
+import { auth, db } from '../src/config/firebaseConfig'; // Instancias de Auth y Firestore
 
+// Importación de las imágenes locales para los servicios
 const IMG_CAMARAS = require('../assets/camaras_seguridad.png.jpeg'); 
 const IMG_PRODUCTOS = require('../assets/venta_productos.png.jpeg'); 
 const IMG_REPARACION = require('../assets/reparacion_pc.png.jpeg'); 
 
-const BLUE_COLOR = '#007AFF';
+const BLUE_COLOR = '#007AFF'; // Color principal
 
-
+// Array fijo que contiene los datos de los servicios destacados.
 const FIXED_SERVICES = [
     {
         id: 'camaras',
@@ -38,6 +39,7 @@ const FIXED_SERVICES = [
         imageSource: IMG_PRODUCTOS, 
     },
     {
+    // ... otros servicios
         id: 'reparacion',
         name: 'Reparación y Mantenimiento de PC',
         description: 'Servicio técnico profesional para que tus equipos funcionen como nuevos.',
@@ -45,7 +47,9 @@ const FIXED_SERVICES = [
     },
 ];
 
-// Componente para mostrar una tarjeta de servicio
+/**
+ * ServiceCard: Componente que renderiza una tarjeta individual para un servicio.
+ */
 const ServiceCard = ({ service }) => {
     return (
         <View style={styles.card}>
@@ -59,10 +63,14 @@ const ServiceCard = ({ service }) => {
     );
 };
 
-// Componente CustomHeader
+/**
+ * CustomHeader: Encabezado de la pantalla.
+ * Muestra el título, el botón de regreso y el avatar de perfil.
+ */
 const CustomHeader = ({ title, onProfilePress, profileImage }) => { 
-    const insets = useSafeAreaInsets();
+    const insets = useSafeAreaInsets(); // Hook para manejar el área segura (notch, barra de estado)
     
+    // Decide si mostrar la foto de perfil o un ícono genérico.
     const renderProfileAvatar = () => {
         if (profileImage) {
             return (
@@ -72,17 +80,20 @@ const CustomHeader = ({ title, onProfilePress, profileImage }) => {
                 />
             );
         }
+        // Retorna un ícono si no hay imagen de perfil.
         return <FontAwesome name="user-circle" size={30} color={BLUE_COLOR} />;
     };
 
     return (
         <View style={[styles.header, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : insets.top + 10 }]}>
+            {/* Botón de regreso (usa useNavigation().goBack() directamente) */}
             <TouchableOpacity onPress={() => useNavigation().goBack()} style={styles.profileButton}>
                 <FontAwesome name="chevron-left" size={20} color={BLUE_COLOR} />
             </TouchableOpacity> 
             
             <Text style={styles.headerTitle}>{title}</Text>
 
+            {/* Botón que activa el menú desplegable (onProfilePress) */}
             <TouchableOpacity onPress={onProfilePress} style={styles.profileButton}>
                 {renderProfileAvatar()}
             </TouchableOpacity>
@@ -91,13 +102,17 @@ const CustomHeader = ({ title, onProfilePress, profileImage }) => {
 };
 
 
+// --- COMPONENTE PRINCIPAL DE PANTALLA ---
 export default function Servicios({ navigation }) {
-    const [profileImage, setProfileImage] = useState(null);
-    const [userName, setUserName] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isMenuVisible, setIsMenuVisible] = useState(false); 
+    // --- ESTADOS DE DATOS Y UI ---
+    const [profileImage, setProfileImage] = useState(null); // URL de la foto de perfil
+    const [userName, setUserName] = useState(''); // Nombre completo del usuario
+    const [isLoading, setIsLoading] = useState(true); // Control de carga inicial
+    const [isMenuVisible, setIsMenuVisible] = useState(false); // Control del menú desplegable
 
-    // Cargar datos del usuario al inicio
+    /**
+     * Carga los datos del usuario autenticado (nombre y foto de perfil) desde Firestore.
+     */
     useEffect(() => {
         const fetchUserData = async () => {
             if (auth.currentUser) {
@@ -110,20 +125,21 @@ export default function Servicios({ navigation }) {
                     setUserName(userData.firstName + ' ' + userData.lastName);
                 }
             }
-            setIsLoading(false);
+            setIsLoading(false); // Finaliza la carga
         };
         fetchUserData();
-    }, []);
+    }, []); // Se ejecuta solo al montar el componente
 
-    // Función de Cerrar Sesión
+    // Función para cerrar la sesión del usuario.
     const handleLogOut = async () => {
         try {
-            await signOut(auth);
+            await signOut(auth); // Cierra la sesión en Firebase
         } catch (error) {
             console.error("Error al cerrar sesión:", error);
         }
     };
     
+    // Muestra la pantalla de carga si los datos no están listos.
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -139,11 +155,11 @@ export default function Servicios({ navigation }) {
             {/* Header */}
             <CustomHeader
                 title="Nuestros Servicios"
-                onProfilePress={() => setIsMenuVisible(!isMenuVisible)} 
+                onProfilePress={() => setIsMenuVisible(!isMenuVisible)} // Función que alterna la visibilidad del menú
                 profileImage={profileImage} 
             />
             
-            {/* Menú desplegable */}
+            {/* Menú desplegable (se muestra si isMenuVisible es true) */}
             {isMenuVisible && (
                 <View style={styles.profileMenu}>
                     <View style={styles.menuHeader}>
@@ -151,7 +167,7 @@ export default function Servicios({ navigation }) {
                     </View>
                     <TouchableOpacity style={styles.menuItem} onPress={() => {
                         setIsMenuVisible(false);
-                        navigation.navigate('Perfil');
+                        navigation.navigate('Perfil'); // Navega a la pestaña Perfil
                     }}>
                         <FontAwesome name="user" size={20} color={BLUE_COLOR} style={{ marginRight: 10 }} />
                         <Text style={styles.menuText}>Mi Perfil</Text>
@@ -167,6 +183,7 @@ export default function Servicios({ navigation }) {
                 <Text style={styles.sectionTitle}>Servicios Destacados</Text>
                 
                 <View style={styles.cardContainer}>
+                    {/* Mapea y renderiza las tarjetas de servicios fijos */}
                     {FIXED_SERVICES.map(service => (
                         <ServiceCard key={service.id} service={service} />
                     ))}
@@ -180,9 +197,7 @@ export default function Servicios({ navigation }) {
     );
 }
 
-// ---------------------------------------------------------------------------------------------------
-// 2. Estilos para el Menú y Avatar 
-// ---------------------------------------------------------------------------------------------------
+// 2. Estilos 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -294,9 +309,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 10,
     },
-    // ------------------------------------------------------
     // ESTILOS DEL MENÚ DESPLEGABLE
-    // ------------------------------------------------------
     profileMenu: {
         position: 'absolute',
         top: Platform.OS === 'android' ? StatusBar.currentHeight + 50 : 80, 

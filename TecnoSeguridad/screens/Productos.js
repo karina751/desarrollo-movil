@@ -14,12 +14,17 @@ import {
     StatusBar,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+// Importamos funciones de Firestore para leer datos.
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { auth, db } from '../src/config/firebaseConfig';
-import { signOut } from 'firebase/auth'; 
+import { auth, db } from '../src/config/firebaseConfig'; // Instancias de Auth y Firestore
+import { signOut } from 'firebase/auth'; // Función para cerrar sesión
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native'; // Hook de navegación
 
+/**
+ * CustomAlert: Modal de alerta personalizado.
+ * Se usa para mostrar feedback de éxito o error (ej: después de cerrar sesión).
+ */
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136'; 
@@ -51,6 +56,7 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
     );
 };
 
+// Estilos específicos para el Custom Alert (Se mantienen)
 const customAlertStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
     alertBox: {
@@ -72,8 +78,12 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// Componente CustomHeader 
+/**
+ * CustomHeader: Encabezado de la pantalla.
+ * Muestra el botón de regreso, el título y el avatar del perfil con menú desplegable.
+ */
 const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfilePress, profileImage }) => {
+    // Decide si mostrar la foto de perfil real o un ícono genérico.
     const renderProfileAvatar = () => {
         if (profileImage) {
             return (
@@ -88,6 +98,7 @@ const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfil
     
     return (
         <View style={styles.header}>
+            {/* Si showBackButton es true, muestra el botón de regresar. */}
             {showBackButton ? (
                 <TouchableOpacity onPress={onBackPress || (() => navigation.goBack())} style={styles.backButton}>
                     <FontAwesome name="chevron-left" size={24} color="#007AFF" />
@@ -104,6 +115,10 @@ const CustomHeader = ({ navigation, title, showBackButton, onBackPress, onProfil
     );
 };
 
+/**
+ * ProductCard: Tarjeta que presenta un solo producto en la cuadrícula (grid).
+ * Incluye opciones para ver más detalles o añadir al carrito.
+ */
 const ProductCard = ({ product, onVerMasPress, onAgregarPress }) => {
     return (
         <View style={styles.productCard}>
@@ -130,15 +145,17 @@ const ProductCard = ({ product, onVerMasPress, onAgregarPress }) => {
 };
 
 
+// --- COMPONENTE PRINCIPAL DE PANTALLA ---
 export default function Productos({ navigation }) {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [profileImage, setProfileImage] = useState(null);
+    // --- ESTADOS DE DATOS ---
+    const [searchQuery, setSearchQuery] = useState(''); // Texto del campo de búsqueda
+    const [profileImage, setProfileImage] = useState(null); // URL de la foto de perfil
     const [userName, setUserName] = useState(''); 
-    const [isMenuVisible, setIsMenuVisible] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [products, setProducts] = useState([]); 
+    const [isMenuVisible, setIsMenuVisible] = useState(false); // Controla el menú desplegable de perfil
+    const [isLoading, setIsLoading] = useState(true); // Controla la carga inicial de datos
+    const [products, setProducts] = useState([]); // Lista de productos cargados de Firestore
     
-    // Estados para alertas 
+    // Estados para alertas (CustomAlert)
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
     const showAlert = (title, message, type = 'error') => {
@@ -149,11 +166,10 @@ export default function Productos({ navigation }) {
         setIsAlertVisible(false);
     };
 
-    // ----------------------------------------------------
     // FUNCIÓN PARA CERRAR SESIÓN
     const handleLogOut = async () => {
         try {
-            await signOut(auth);
+            await signOut(auth); // Cierra la sesión en Firebase
             setIsMenuVisible(false); 
             showAlert("Sesión cerrada", "Has cerrado sesión correctamente.", 'success');
         } catch (error) {
@@ -161,20 +177,21 @@ export default function Productos({ navigation }) {
             showAlert("Error", "Hubo un problema al cerrar sesión.");
         }
     };
-    // ----------------------------------------------------
 
-    // FUNCIÓN DE CARGA DE DATOS 
+    /**
+     * Función que carga los datos del usuario y la lista de productos desde Firestore.
+     */
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            // 1. Obtener datos de usuario
+            // 1. Obtener datos de usuario (nombre y foto)
             if (auth.currentUser) {
                 const userRef = doc(db, 'users', auth.currentUser.uid);
                 const docSnap = await getDoc(userRef);
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
                     setProfileImage(userData.profileImage || null);
-                    setUserName(userData.firstName + ' ' + userData.lastName); // 👈 OBTENER NOMBRE
+                    setUserName(userData.firstName + ' ' + userData.lastName); // Concatena nombre y apellido
                 }
             }
 
@@ -190,24 +207,27 @@ export default function Productos({ navigation }) {
         } catch (error) {
             console.error("Error al cargar datos de Productos:", error);
         } finally {
-            setIsLoading(false);
+            setIsLoading(false); // Finaliza la carga
         }
     }, []);
 
+    // Hook que carga datos al inicio y cada vez que la pantalla recibe el foco.
     useEffect(() => {
         fetchData(); 
-        const unsubscribe = navigation.addListener('focus', () => {
+        const unsubscribe = navigation.addListener('focus', () => { // Escucha el evento 'focus'
             fetchData();
         });
-        return unsubscribe;
+        return unsubscribe; // Limpieza del listener
     }, [navigation, fetchData]);
 
 
+    // Filtra los productos visibles según el texto de búsqueda (nombre o categoría).
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Muestra la pantalla de carga si los datos no están listos.
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -235,9 +255,10 @@ export default function Productos({ navigation }) {
                     showBackButton={true}
                     onBackPress={() => navigation.goBack()}
                     profileImage={profileImage}
-                    onProfilePress={() => setIsMenuVisible(!isMenuVisible)} // 👈 Alterna el menú
+                    onProfilePress={() => setIsMenuVisible(!isMenuVisible)} // Alterna el menú desplegable
                 />
                 
+                {/* Menú Desplegable de Perfil */}
                 {isMenuVisible && (
                     <View style={styles.profileMenu}>
                         <View style={styles.menuHeader}>
@@ -245,7 +266,7 @@ export default function Productos({ navigation }) {
                         </View>
                         <TouchableOpacity style={styles.menuItem} onPress={() => {
                             setIsMenuVisible(false);
-                            navigation.navigate('Perfil');
+                            navigation.navigate('Perfil'); // Navega a la pestaña Perfil
                         }}>
                             <FontAwesome name="user" size={20} color="#007AFF" style={{ marginRight: 10 }} />
                             <Text style={styles.menuText}>Mi Perfil</Text>
@@ -257,6 +278,7 @@ export default function Productos({ navigation }) {
                     </View>
                 )}
 
+                {/* Barra de Búsqueda */}
                 <View style={styles.searchBarContainer}>
                     <FontAwesome name="search" size={20} color="#888" style={styles.searchIcon} />
                     <TextInput
@@ -267,14 +289,15 @@ export default function Productos({ navigation }) {
                     />
                 </View>
 
+                {/* Cuadrícula de Productos (Scrollview) */}
                 <ScrollView contentContainerStyle={styles.productsGrid}>
                     {filteredProducts.length > 0 ? (
                         filteredProducts.map(product => (
                             <ProductCard 
                                 key={product.id}
                                 product={product}
-                                onVerMasPress={() => console.log('Ver más de', product.name)}
-                                onAgregarPress={() => console.log('Agregar a carrito', product.name)}
+                                onVerMasPress={() => console.log('Ver más de', product.name)} // Acción pendiente (console log)
+                                onAgregarPress={() => console.log('Agregar a carrito', product.name)} // Acción pendiente (console log)
                             />
                         ))
                     ) : (
@@ -282,9 +305,10 @@ export default function Productos({ navigation }) {
                     )}
                 </ScrollView>
 
+                {/* Botón de Acceso al Panel de Administración */}
                 <TouchableOpacity 
                     style={styles.adminPanelButton} 
-                    onPress={() => navigation.navigate('AdminProductos')}
+                    onPress={() => navigation.navigate('AdminProductos')} // Navega a la pantalla AdminProductos
                 >
                     <Text style={styles.adminPanelButtonText}>Panel de Administración</Text>
                 </TouchableOpacity>
@@ -293,9 +317,7 @@ export default function Productos({ navigation }) {
     );
 }
 
-// ---------------------------------------------------------------------------------------------------
-// 3. Estilos Adicionales 
-// ---------------------------------------------------------------------------------------------------
+// Estilos Adicionales 
 const styles = StyleSheet.create({
     safeArea: { 
         flex: 1, 

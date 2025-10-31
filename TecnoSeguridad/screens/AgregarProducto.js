@@ -1,4 +1,3 @@
-// Archivo: AgregarProducto.js - CÓDIGO FINAL Y CORREGIDO
 import React, { useState, useEffect } from 'react';
 import { 
     View, 
@@ -14,23 +13,26 @@ import {
     ScrollView, 
     KeyboardAvoidingView, 
     Platform,
-    Alert, // Mantener si lo necesitas en otro lugar, pero no lo usamos para el picker aquí
+    Alert, // Se mantiene, aunque el selector de imagen personalizado no lo usa
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+// Importamos funciones de Firestore para agregar y actualizar documentos.
 import { collection, addDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig'; 
 import { LinearGradient } from 'expo-linear-gradient';
-// 🚨 Importaciones de navegación y ImagePicker
-import { useNavigation, useRoute } from '@react-navigation/native';
+// Importaciones de utilidades y librerías externas
 import * as ImagePicker from 'expo-image-picker'; 
-import { subirImagenACloudinary } from '../src/config/cloudinaryConfig'; 
+import { subirImagenACloudinary } from '../src/config/cloudinaryConfig'; // Función global de subida de imagen
 
-// --- Variables de color ajustadas ---
+// --- Variables de color globales ---
 const BLUE_COLOR_SOFT = '#1E90FF'; // Azul principal
 const RED_COLOR = '#FF4136';
 const GREEN_COLOR = '#4CAF50';
 
-// Componente CustomAlert (Reutilizado para Feedback)
+/**
+ * CustomAlert: Modal de alerta personalizado.
+ * Muestra el feedback de las operaciones (ej. "Producto Guardado").
+ */
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
     const feedbackColor = isSuccess ? GREEN_COLOR : RED_COLOR;
@@ -85,7 +87,10 @@ const customAlertStyles = StyleSheet.create({
 });
 
 
-// 🚨 NUEVO COMPONENTE: MODAL PERSONALIZADO PARA SELECCIÓN DE ORIGEN DE IMAGEN
+/**
+ * ImageSourceOptions: Modal personalizado para que el usuario elija entre
+ * usar la cámara o seleccionar una foto de la galería.
+ */
 const ImageSourceOptions = ({ isVisible, onTakePhoto, onSelectGallery, onCancel }) => {
     return (
         <Modal
@@ -131,28 +136,29 @@ const ImageSourceOptions = ({ isVisible, onTakePhoto, onSelectGallery, onCancel 
 };
 
 
-// 🚨 COMPONENTE PRINCIPAL (Reestructurado para ser un Modal)
+// --- COMPONENTE PRINCIPAL (Modal de Formulario) ---
 export default function AgregarProducto({ isVisible, onClose, onProductAdded, productToEdit }) {
-    // 🚨 Extraemos la lógica de estado del formulario aquí
-    const [id, setId] = useState(null);
+    // --- ESTADOS DEL FORMULARIO (Datos) ---
+    const [id, setId] = useState(null); // ID del producto si estamos editando
     const [productName, setProductName] = useState('');
     const [category, setCategory] = useState('');
     const [price, setPrice] = useState('');
     const [stock, setStock] = useState('');
-    const [imageURL, setImageURL] = useState('');
-    const [localImageUri, setLocalImageUri] = useState(null); 
+    const [imageURL, setImageURL] = useState(''); // URL final de Cloudinary
+    const [localImageUri, setLocalImageUri] = useState(null); // URI de la imagen seleccionada localmente
     
-    // 🚨 ESTADOS DE UI/FEEDBACK
-    const [isSaving, setIsSaving] = useState(false);
-    const [alertVisible, setAlertVisible] = useState(false);
+    // --- ESTADOS DE CONTROL (UI) ---
+    const [isSaving, setIsSaving] = useState(false); // Bloquea el botón al guardar
+    const [alertVisible, setAlertVisible] = useState(false); // Controla la visibilidad del CustomAlert
     const [alertTitle, setAlertTitle] = useState('');
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState('error');
     
-    const [shouldReload, setShouldReload] = useState(false); 
-    const [isSourceModalVisible, setIsSourceModalVisible] = useState(false); // 🚨 Nuevo estado para el modal de opciones
+    const [shouldReload, setShouldReload] = useState(false); // Bandera para recargar la lista en AdminProductos
+    const [isSourceModalVisible, setIsSourceModalVisible] = useState(false); // Controla la visibilidad del modal Cámara/Galería
     
     
+    // Hook que carga los datos del producto a editar o resetea para uno nuevo.
     useEffect(() => {
         if (productToEdit) {
             setId(productToEdit.id);
@@ -175,6 +181,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
     }, [productToEdit]);
 
 
+    // Muestra el CustomAlert.
     const showAlert = (title, message, type = 'error') => {
         setAlertTitle(title);
         setAlertMessage(message);
@@ -182,6 +189,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         setAlertVisible(true);
     };
 
+    // Resetea todos los estados del formulario.
     const resetForm = () => {
         setId(null);
         setProductName('');
@@ -195,17 +203,25 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         setShouldReload(false);
     };
 
-    // Lógica para manejar el cierre del modal después de la operación (llama a onProductAdded)
+    /**
+     * Cierra el modal, asegurando que la lista de productos se recargue 
+     * en la pantalla de administración si hubo un guardado exitoso.
+     */
     const handleClose = () => {
         if (shouldReload) {
-            onProductAdded(); // Recarga los productos en AdminProductos
+            onProductAdded(); // Llama a la función de recarga en el componente padre
         }
         resetForm();
         onClose(); // Cierra el modal
     };
     
     
-    // 🚨 Lógica de Subida Centralizada (llamada por takePhoto/selectFromGallery)
+    /**
+     * Lógica centralizada para subir la imagen:
+     * 1. Cierra el modal de opciones.
+     * 2. Llama a la función global subirImagenACloudinary.
+     * 3. Almacena la URL final en el estado imageURL.
+     */
     const handleUploadImage = async (uri) => {
         setIsSaving(true);
         setIsSourceModalVisible(false); // Cierra el modal de opciones
@@ -213,10 +229,11 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         try {
             showAlert('Subiendo Imagen', 'Por favor espera, procesando la imagen...', 'success'); 
             
+            // Llama a la función global de subida y guarda en la carpeta 'productos'.
             const cloudinaryUrl = await subirImagenACloudinary(uri, 'productos');
             
-            setLocalImageUri(uri);
-            setImageURL(cloudinaryUrl);
+            setLocalImageUri(uri); // Mantiene la URI local para la vista previa
+            setImageURL(cloudinaryUrl); // Guarda la URL final de Cloudinary
             
             showAlert('Subida Exitosa', 'Imagen cargada correctamente. Continúa guardando el producto.', 'success');
             
@@ -229,9 +246,9 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
     };
 
 
-    // 🚨 FUNCIÓN PARA TOMAR FOTO CON CÁMARA (Llamada por el modal personalizado)
+    // Función para solicitar permisos de la cámara y tomar una foto.
     const takePhoto = async () => {
-        setIsSourceModalVisible(false); // Cierra el modal de opciones
+        setIsSourceModalVisible(false); 
         const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
         if (cameraStatus !== 'granted') {
              showAlert('Permiso Denegado', 'Necesitamos acceso a la cámara para tomar una foto.', 'error');
@@ -250,9 +267,9 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
     
-    // 🚨 FUNCIÓN PARA SELECCIONAR DE GALERÍA (Llamada por el modal personalizado)
+    // Función para solicitar permisos de la galería y seleccionar una foto.
     const selectFromGallery = async () => {
-        setIsSourceModalVisible(false); // Cierra el modal de opciones
+        setIsSourceModalVisible(false); 
         const { status: mediaLibraryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (mediaLibraryStatus !== 'granted') {
             showAlert('Permiso Denegado', 'Necesitamos acceso a la galería para subir una foto.', 'error');
@@ -271,12 +288,15 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
 
-    // 🚨 FUNCIÓN PRINCIPAL: MUESTRA EL MODAL DE OPCIONES
+    // Función que muestra el modal personalizado para elegir el origen de la imagen.
     const pickImage = () => {
         setIsSourceModalVisible(true);
     };
     
-    // Manejar el guardado (URL en Firestore)
+    /**
+     * Función que maneja el guardado o actualización del producto en Firestore.
+     * La URL de la imagen (imageURL) debe existir antes de llamar a esta función.
+     */
     const handleSaveProduct = async () => {
         Keyboard.dismiss();
         
@@ -306,16 +326,16 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                 category: category,
                 price: parseFloat(price), 
                 stock: parseInt(stock), 
-                image: imageURL, // ⬅️ URL FINAL DE CLOUDINARY
+                image: imageURL, // Se guarda la URL de Cloudinary
             };
 
             if (id) {
-                // MODO EDICIÓN
+                // MODO EDICIÓN: Actualiza el documento
                 const productRef = doc(db, 'products', id);
                 await updateDoc(productRef, productData);
                 showAlert('Producto Actualizado', 'Los cambios se guardaron correctamente.', 'success');
             } else {
-                // MODO CREACIÓN
+                // MODO CREACIÓN: Crea un nuevo documento
                 const productsCollectionRef = collection(db, 'products');
                 await addDoc(productsCollectionRef, {
                     ...productData,
@@ -324,10 +344,10 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                 showAlert('Producto Guardado', 'El nuevo producto se ha añadido correctamente.', 'success');
             }
             
-            // 🚨 Activar la bandera de recarga antes de cerrar
+            // Activa la bandera de recarga
             setShouldReload(true);
             
-            // Cierre después de un breve delay para que el usuario vea la alerta
+            // Cierra el modal tras 1 segundo.
             setTimeout(() => {
                 handleClose(); 
             }, 1000); 
@@ -340,7 +360,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
         }
     };
     
-    // Determinamos qué URL mostrar para la vista previa
+    // URL utilizada para la vista previa de la imagen (local si se acaba de seleccionar, o la final si ya está guardada).
     const previewUrl = localImageUri || imageURL;
 
     return (
@@ -365,6 +385,7 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
             >
+                {/* KeyboardAvoidingView ajusta el layout cuando el teclado aparece */}
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
                     style={styles.keyboardAvoidingContainer}
@@ -374,13 +395,11 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                         <View style={styles.modalContentWrapper}>
                             <View style={styles.modalView}>
                                 {/* Header del Modal */}
-                
                                 <View style={styles.modalHeader}>
                                     <Text style={styles.modalTitle}>
                                         {id ? "Editar Producto" : "Agregar Nuevo Producto"}
                                     </Text>
                                     <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                     
                                        <FontAwesome name="times" size={24} color="#666" />
                                     </TouchableOpacity>
                                 </View>
@@ -391,67 +410,27 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
 
                                 <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
           
-                                    {/* Campo Nombre */}
+                                    {/* Campos del Formulario (Nombre, Categoría, Precio, Stock) */}
                                     <Text style={styles.label}>Nombre del Producto</Text>
-                               
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Ej. Teclado mecánico RGB"
-            
-                                        value={productName}
-                                        onChangeText={setProductName}
-                                
-                                        placeholderTextColor={BLUE_COLOR_SOFT}
-                                    />
+                                    <TextInput /* ... */ />
 
                                     <Text style={styles.label}>Categoría</Text>
-                   
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Ej. Gaming, Electrónica"
-                                        value={category}
-                                        onChangeText={setCategory}
-                   
-                                        placeholderTextColor={BLUE_COLOR_SOFT}
-                                    />
+                                    <TextInput /* ... */ />
 
                                     <View style={styles.row}>
-      
                                         <View style={styles.halfWidth}>
                                             <Text style={styles.label}>Precio</Text>
-                    
-                                            <TextInput
-                                                style={styles.input}
-                            
-                                                placeholder="Ej. 75000"
-                                                value={price}
-                                                onChangeText={setPrice}
-    
-                                                keyboardType="numeric"
-                                                placeholderTextColor={BLUE_COLOR_SOFT}
-        
-                                            />
+                                            <TextInput /* ... */ />
                                         </View>
                         
                                         <View style={styles.halfWidth}>
                                             <Text style={styles.label}>Stock</Text>
-                                      
-                                            <TextInput
-                                                style={styles.input}
-                                              
-                                                placeholder="Ej. 25"
-                                                value={stock}
-                                                onChangeText={setStock}
- 
-                                                keyboardType="numeric"
-                                                placeholderTextColor={BLUE_COLOR_SOFT}
-     
-                                            />
+                                            <TextInput /* ... */ />
                                         </View>
                      
                                     </View>
 
-                                    {/* 🚨 Botón para Seleccionar Imagen */}
+                                    {/* Botón para Seleccionar Imagen (Abre el modal ImageSourceOptions) */}
                                     <Text style={styles.label}>Imagen del Producto</Text>
                                     <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage} disabled={isSaving}>
                                         <FontAwesome name="image" size={20} color="#FFF" style={{marginRight: 10}} />
@@ -461,9 +440,8 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                                     </TouchableOpacity>
                                     
             
-                                    {/* Muestra la imagen seleccionada o la URL existente */}
+                                    {/* Muestra la vista previa */}
                                     {previewUrl ? (
-                                
                                         <Image source={{ uri: previewUrl }} style={styles.previewImage} />
                                     ) : (
                                         <View style={styles.previewImagePlaceholder}>
@@ -472,44 +450,36 @@ export default function AgregarProducto({ isVisible, onClose, onProductAdded, pr
                                     )}
 
 
-                                    {/* Botones de Acción */}
-          
+                                    {/* Botón Guardar/Actualizar */}
                                     <TouchableOpacity 
                                         style={styles.saveButton} 
-                                
                                         onPress={handleSaveProduct}
                                         disabled={isSaving}
                                     >
-                
                                         {isSaving ?
                                         (
                                             <ActivityIndicator color="#FFF" />
                                         ) : (
-            
                                             <Text style={styles.saveButtonText}>{id ? "Guardar Cambios" : "Guardar Producto"}</Text>
                                         )}
-                     
                                     </TouchableOpacity>
 
+                                    {/* Botón Cancelar */}
                                     <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
                                         <Text style={styles.cancelButtonText}>Cancelar</Text>
-      
                                     </TouchableOpacity>
                                 </ScrollView>
                             </View>
-          
                         </View>
                     </TouchableWithoutFeedback>
                 </KeyboardAvoidingView>
                 {/* Alerta visible si ocurre un error o éxito */}
                 <CustomAlert
-         
                     isVisible={alertVisible}
                     title={alertTitle}
                     message={alertMessage}
                     onClose={() => setAlertVisible(false)} 
                     type={alertType}
-       
                 />
             </LinearGradient>
         </Modal>
@@ -530,7 +500,6 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
-  
         paddingVertical: 20, 
     },
     modalView: {
@@ -542,7 +511,6 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
-      
         shadowRadius: 4,
         elevation: 5,
         maxHeight: '100%', 
@@ -556,7 +524,6 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-      
         color: '#007AFF',
     },
     closeButton: {
@@ -571,7 +538,6 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 15,
         color: '#333',
-       
         fontWeight: '600',
         marginBottom: 5,
         marginTop: 10,
@@ -584,7 +550,6 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         fontSize: 16,
         marginBottom: 10,
-        
         color: BLUE_COLOR_SOFT,
         backgroundColor: '#f9f9f9',
     },
@@ -596,7 +561,7 @@ const styles = StyleSheet.create({
     halfWidth: {
         width: '48%',
     },
-    // 🚨 ESTILOS DEL BOTÓN DE IMAGEN
+    // ESTILOS DEL BOTÓN DE IMAGEN
     imagePickerButton: {
         backgroundColor: '#007AFF',
         paddingVertical: 12,
@@ -642,7 +607,6 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     saveButtonText: {
- 
         color: '#FFF',
         fontSize: 17,
         fontWeight: 'bold',
@@ -656,13 +620,12 @@ const styles = StyleSheet.create({
         borderColor: BLUE_COLOR_SOFT,
     },
     cancelButtonText: {
-  
         color: BLUE_COLOR_SOFT,
         fontSize: 17,
         fontWeight: 'bold',
     },
     
-    // 🚨 ESTILOS ADICIONALES PARA EL MODAL DE OPCIONES DE IMAGEN (COPIADOS DE PERFIL.JS)
+    // ESTILOS ADICIONALES PARA EL MODAL DE OPCIONES DE IMAGEN
     sourceModalContainer: {
         flex: 1,
         justifyContent: 'flex-end',

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../src/config/firebaseConfig';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; // 👈 [1] IMPORTACIÓN CRÍTICA: signOut
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; 
 import { doc, setDoc } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -284,7 +284,7 @@ export default function SignUp({ navigation }) {
                 createdAt: new Date()
             });
 
-            // C. CERRAR SESIÓN Y REDIRIGIR
+            // CERRAR SESIÓN Y REDIRIGIR
             
             //  PASO 1: Cerrar sesión inmediatamente para evitar el inicio de sesión automático
             await signOut(auth); 
