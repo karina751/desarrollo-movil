@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: Productos.js
+ * FUNCIÓN: Muestra el catálogo de productos de la tienda al cliente final.
+ * -----------------------------------------------------------
+ * - DATOS: Consulta y lista todos los productos desde la colección 'products' de Firestore.
+ * - EFICIENCIA: Implementa funcionalidad de búsqueda y filtrado de lado del cliente sobre la lista cargada.
+ * - UI: Muestra los productos en una grilla adaptable (ProductCard).
+ * - NAVEGACIÓN: Incluye un botón de acceso directo al Panel de Administración (AdminProductos).
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, 

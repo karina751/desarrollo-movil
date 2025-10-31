@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: Login.js
+ * FUNCIÓN: Maneja la autenticación de usuarios (Inicio de Sesión).
+ * -----------------------------------------------------------
+ * - UTILIZA: Firebase Auth (signInWithEmailAndPassword).
+ * - UX/SEGURIDAD: Incluye la opción de "Olvidé mi Contraseña" (sendPasswordResetEmail).
+ * - NAVEGACIÓN: Utiliza navigation.reset() tras el éxito para borrar el historial.
+ * - COMPONENTES: Usa CustomAlert y PasswordResetModal para feedback visual.
+ */
 import React, { useState } from 'react';
 import { 
     View, 

@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: Home.js
+ * FUNCIÓN: Pantalla principal que muestra contenido destacado e interactivo.
+ * -----------------------------------------------------------
+ * - DATOS: Carga el perfil del usuario (nombre/foto) y Productos Destacados desde Firestore.
+ * - COMPONENTE CLAVE: Implementa un carrusel horizontal infinito con FlatList (usando técnica de bucle).
+ * - INTERACCIÓN: Contiene el componente InteractiveSurvey para encuestas en tiempo real con Firestore.
+ * - UI: Utiliza un CustomHeader y un menú desplegable para navegación rápida a Perfil.
+ */
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react'; 
 import { 
     View, 

@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: SignUp.js
+ * FUNCIÓN: Maneja el registro de nuevos usuarios.
+ * -----------------------------------------------------------
+ * - AUTENTICACIÓN: Crea cuenta en Firebase Auth y almacena datos de perfil (Nombre/Apellido) en Firestore.
+ * - VALIDACIÓN: Implementa validación de complejidad de contraseña en tiempo real.
+ * - FLUJO CLAVE: Llama a signOut() tras el registro para forzar el inicio de sesión explícito.
+ * - UX: Usa CustomAlert y el componente PasswordRequirements para feedback inmediato.
+ */
 import React, { useState } from 'react';
 import {
     View,

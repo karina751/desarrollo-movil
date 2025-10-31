@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: Perfil.js
+ * FUNCIÓN: Permite al usuario ver y modificar sus datos personales y gestionar su sesión.
+ * -----------------------------------------------------------
+ * - DATOS: Carga información de perfil desde Firestore.
+ * - UPDATE: Permite editar Nombre/Apellido (updateDoc) y cambiar la Foto de Perfil (usando Cloudinary).
+ * - CIERRE DE SESIÓN: Maneja la salida segura de la aplicación (signOut(auth) y navigation.reset).
+ * - NAVEGACIÓN: Utiliza la bandera shouldNavigate para forzar la redirección a Home/Login tras el éxito/cierre.
+ */
 import React, { useState, useEffect } from 'react';
 import {
     View,

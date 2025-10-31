@@ -1,3 +1,12 @@
+/**
+ * MÓDULO: Navigation.js
+ * FUNCIÓN: Define la estructura de navegación de la aplicación y maneja el ruteo condicional.
+ * -----------------------------------------------------------
+ * - LÓGICA CLAVE: Utiliza onAuthStateChanged (Firebase Auth) para determinar si el usuario está logeado.
+ * - ESTRUCTURA: Combina un Stack Navigator (para el flujo Login/Admin) con un BottomTab Navigator (para la navegación principal).
+ * - SEGURIDAD: Implementa Navegación Condicional para mostrar las pantallas de Auth o la App principal.
+ * - UX: Muestra una pantalla de carga (LoadingScreen) mientras verifica el estado de Firebase.
+ */
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';

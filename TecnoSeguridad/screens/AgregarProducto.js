@@ -1,3 +1,12 @@
+/**
+ * COMPONENTE/MODAL: AgregarProducto.js
+ * FUNCIÓN: Formulario dinámico para crear o editar un producto en el inventario.
+ * -----------------------------------------------------------
+ * - CRUD: Utiliza addDoc (Creación) o updateDoc (Edición), basado en la prop productToEdit.
+ * - GESTIÓN DE ARCHIVOS: Integra expo-image-picker y Cloudinary (subirImagenACloudinary) para manejar imágenes y guardar solo la URL en Firestore.
+ * - VALIDACIÓN: Realiza validaciones de campos (números, existencia de imagen).
+ * - FLUJO: Activa una bandera (shouldReload) para forzar la recarga del componente padre (AdminProductos) al cerrar.
+ */
 import React, { useState, useEffect } from 'react';
 import { 
     View, 

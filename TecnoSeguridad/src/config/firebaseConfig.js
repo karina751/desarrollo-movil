@@ -1,3 +1,11 @@
+/**
+ * MÓDULO: firebaseConfig.js
+ * FUNCIÓN: Inicializa y configura la conexión con los servicios de Google Firebase.
+ * -----------------------------------------------------------
+ * - SEGURIDAD: Utiliza variables de entorno (process.env.EXPO_PUBLIC_...) para credenciales.
+ * - EXPORTA: La instancia de Auth (Autenticación), db (Firestore, base de datos) y storage (archivos).
+ * - ARQUITECTURA: Es un módulo central que permite la reutilización de la conexión en toda la app.
+ */
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'; 

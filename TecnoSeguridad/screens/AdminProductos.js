@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: AdminProductos.js
+ * FUNCIÓN: Panel de administración para la gestión completa del inventario (CRUD).
+ * -----------------------------------------------------------
+ * - LÓGICA CLAVE: Implementa las operaciones CRUD de Edición (updateDoc), Eliminación (deleteDoc) y el Toggle de "Destacado".
+ * - UX/SEGURIDAD: Utiliza ConfirmationModal para confirmar eliminaciones.
+ * - MODULARIDAD: Reutiliza el componente AgregarProducto para las tareas de Creación/Edición.
+ * - ACTUALIZACIÓN: Recarga la lista de productos al regresar o tras una modificación exitosa.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, 

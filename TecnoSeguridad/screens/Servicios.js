@@ -1,3 +1,11 @@
+/**
+ * PANTALLA: Servicios.js
+ * FUNCIÓN: Muestra la oferta de servicios técnicos y de seguridad de la tienda.
+ * -----------------------------------------------------------
+ * - DATOS: Utiliza un **modelo estático** (FIXED_SERVICES y require de imágenes locales) para garantizar la carga instantánea.
+ * - ENFOQUE: Es una pantalla principalmente informativa, no interactúa con Firestore para los servicios en sí.
+ * - REUTILIZACIÓN: Carga los datos del usuario (fetchUserData) para el CustomHeader.
+ */
 import React, { useState, useEffect } from 'react'; 
 import { 
     View, 
