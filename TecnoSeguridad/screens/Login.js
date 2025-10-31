@@ -301,7 +301,7 @@ export default function Login({ navigation }) {
                             keyboardType="email-address"
                             autoCapitalize="none"
                             autoCorrect={false}
-                            maxLength={25}
+                            maxLength={50}
                         />
                     </View>
                     
