@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: Login.js
+ * FUNCIÓN: Maneja la autenticación de usuarios (Inicio de Sesión).
+ * -----------------------------------------------------------
+ * - UTILIZA: Firebase Auth (signInWithEmailAndPassword).
+ * - UX/SEGURIDAD: Incluye la opción de "Olvidé mi Contraseña" (sendPasswordResetEmail).
+ * - NAVEGACIÓN: Utiliza navigation.reset() tras el éxito para borrar el historial.
+ * - COMPONENTES: Usa CustomAlert y PasswordResetModal para feedback visual.
+ */
 import React, { useState } from 'react';
 import { 
     View, 
@@ -13,13 +22,20 @@ import {
     ActivityIndicator
 } from 'react-native'; 
 import { FontAwesome } from '@expo/vector-icons';
+// Importamos las funciones de autenticación de Firebase
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'; 
-import { auth } from '../src/config/firebaseConfig';
-import { LinearGradient } from 'expo-linear-gradient';
+import { auth } from '../src/config/firebaseConfig'; // Instancia de Firebase Auth
+import { LinearGradient } from 'expo-linear-gradient'; // Componente para el fondo degradado
 
-// Componente CustomAlert: Modal de alerta con ícono y color 
+// --- Componentes de Feedback (Alertas y Modales) ---
+
+/**
+ * CustomAlert: Modal de alerta personalizado. 
+ * Se usa para mostrar mensajes de éxito o error después de intentar iniciar sesión.
+ */
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
+    // Define colores para éxito (verde) o error (rojo)
     const feedbackColor = isSuccess ? '#4CAF50' : '#FF4136';
     const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
 
@@ -33,8 +49,8 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             <View style={customAlertStyles.modalContainer}>
                 <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
                     <View style={customAlertStyles.headerContainer}>
-                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
-                         <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
+                           <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                           <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
                     </View>
                     <Text style={customAlertStyles.alertMessageBase}>{message}</Text>
                     <TouchableOpacity 
@@ -71,7 +87,10 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// Componente del modal de recuperación de contraseña
+/**
+ * PasswordResetModal: Componente Modal para la funcionalidad de recuperación de contraseña.
+ * Solicita el correo electrónico del usuario y envía un enlace de restablecimiento.
+ */
 const PasswordResetModal = ({ isVisible, onClose, onReset, loading, message, resetEmail, setResetEmail }) => {
     return (
         <Modal
@@ -87,7 +106,7 @@ const PasswordResetModal = ({ isVisible, onClose, onReset, loading, message, res
                         Ingrese su correo electrónico para recibir un enlace para restablecer su contraseña.
                     </Text>
                     <View style={styles.inputGroup}>
-                        <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icon} />
+                        <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
                         <TextInput
                             style={styles.input}
                             placeholder="Correo electrónico"
@@ -100,6 +119,7 @@ const PasswordResetModal = ({ isVisible, onClose, onReset, loading, message, res
                     </View>
                     {message ? <Text style={styles.messageText}>{message}</Text> : null}
                     <TouchableOpacity style={styles.passwordResetButton} onPress={onReset} disabled={loading}>
+                        {/* Muestra spinner si está cargando, o el texto del botón. */}
                         {loading ? (
                             <ActivityIndicator color="white" />
                         ) : (
@@ -116,43 +136,57 @@ const PasswordResetModal = ({ isVisible, onClose, onReset, loading, message, res
 };
 
 
+// --- COMPONENTE PRINCIPAL ---
 export default function Login({ navigation }) {
+    // Estados para los campos de formulario
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+    const [showPassword, setShowPassword] = useState(false); // Alterna visibilidad de contraseña
     
-    // Estados para el Custom Alert
+    // Estados para el Custom Alert (feedback de Login)
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
     
-    // Estados para el modal de recuperación de contraseña
+    // Estados para el modal de recuperación
     const [isPasswordResetModalVisible, setIsPasswordResetModalVisible] = useState(false);
     const [resetEmail, setResetEmail] = useState('');
     const [resetLoading, setResetLoading] = useState(false);
     const [resetMessage, setResetMessage] = useState('');
 
 
+    // Muestra la alerta de feedback
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
         setIsAlertVisible(true);
     };
+    // Oculta la alerta
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
 
+    /**
+     * Función principal que maneja el proceso de inicio de sesión.
+     * Utiliza Firebase para verificar las credenciales y redirige a HomeTabs si es exitoso.
+     */
     const handleLogin = async () => {
+        // 1. Validación de campos vacíos
         if (!email.trim() || !password.trim()) {
             showAlert("Error de campos", "Por favor ingresa tu correo y contraseña.");
             return;
         }
 
         try {
+            // 2. Intento de inicio de sesión con Firebase
             await signInWithEmailAndPassword(auth, email.trim(), password.trim());
+            
+            // 3. Éxito: Muestra alerta y luego navega a HomeTabs
             showAlert("Login exitoso", "Has iniciado sesión correctamente.", 'success');
             setTimeout(() => {
+                // Navegación robusta: Resetea el stack para ir a la navegación principal (HomeTabs)
                 navigation.reset({ index: 0, routes: [{ name: 'HomeTabs' }] });
-            }, 1500);
+            }, 1500); // Espera 1.5 segundos para la transición
         } catch (error) {
+            // 4. Manejo de errores de autenticación de Firebase
             let errorMessage = "Hubo un problema al iniciar sesión.";
             switch (error.code) {
                 case 'auth/invalid-email':
@@ -171,8 +205,11 @@ export default function Login({ navigation }) {
         }
     };
 
-    // Función para manejar el restablecimiento de contraseña
+    /**
+     * Función que maneja el envío del enlace de recuperación de contraseña mediante Firebase.
+     */
     const handlePasswordReset = async () => {
+        // 1. Validación de campo vacío
         if (!resetEmail.trim()) {
             setResetMessage('Por favor, ingresa tu correo electrónico.');
             return;
@@ -181,16 +218,20 @@ export default function Login({ navigation }) {
         setResetMessage('');
 
         try {
+            // 2. Envía el correo de recuperación a través de Firebase
             await sendPasswordResetEmail(auth, resetEmail.trim());
+            
+            // 3. Muestra éxito y cierra el modal después de 3 segundos
             setResetMessage('✅ Se ha enviado un correo con un enlace. Revisa tu bandeja de entrada.');
             setTimeout(() => {
                 setIsPasswordResetModalVisible(false);
                 setResetMessage('');
             }, 3000);
         } catch (error) {
+            // 4. Manejo de errores específicos de Firebase (ej: usuario no encontrado)
             let errorMessage = "Ocurrió un error. Inténtalo de nuevo más tarde.";
             if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
-                 errorMessage = "La dirección de correo  NO es válida.";
+                 errorMessage = "La dirección de correo NO es válida.";
             }
             setResetMessage(`❌ Error: ${errorMessage}`);
         } finally {
@@ -201,11 +242,12 @@ export default function Login({ navigation }) {
 
     return (
     <LinearGradient
-        colors={['#97c1e6', '#e4eff9']}
+        colors={['#97c1e6', '#e4eff9']} // Fondo degradado
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={styles.contenedorFondo}
     >
+        {/* Modal de Alerta de Login */}
         <CustomAlert
             isVisible={isAlertVisible}
             title={alertData.title}
@@ -214,7 +256,7 @@ export default function Login({ navigation }) {
             type={alertData.type}
         />
 
-        {/* Nuevo modal de recuperación de contraseña */}
+        {/* Modal de Recuperación de Contraseña */}
         <PasswordResetModal
             isVisible={isPasswordResetModalVisible}
             onClose={() => { setIsPasswordResetModalVisible(false); setResetMessage(''); }}
@@ -225,6 +267,7 @@ export default function Login({ navigation }) {
             setResetEmail={setResetEmail}
         />
 
+        {/* KeyboardAvoidingView asegura que el teclado no oculte los campos */}
         <KeyboardAvoidingView
             style={styles.contenedorFondo}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -233,16 +276,20 @@ export default function Login({ navigation }) {
         >
             <ScrollView
                 contentContainerStyle={styles.scrollContenido}
-                keyboardShouldPersistTaps="handled"
+                keyboardShouldPersistTaps="handled" 
             >
                 <View style={styles.contenedorBlanco}>
+                    {/* Sección del Logo y Nombre de la App */}
                     <View style={styles.contenedorLogo}>
                         <View style={styles.bordeLogo}>
                             <Image source={require('../assets/logo.png')} style={styles.logo} />
                         </View>
                         <Text style={styles.nombreApp}>TecnoSeguridad</Text>
                     </View>
+                    
                     <Text style={styles.titulo}>Iniciar Sesión</Text>
+                    
+                    {/* Campo de Correo Electrónico */}
                     <Text style={styles.etiqueta}>Correo Electrónico</Text>
                     <View style={styles.campoContenedor}>
                         <FontAwesome name="envelope" size={20} color="#007AFF" style={styles.icono} />
@@ -256,6 +303,8 @@ export default function Login({ navigation }) {
                             autoCorrect={false}
                         />
                     </View>
+                    
+                    {/* Campo de Contraseña */}
                     <Text style={styles.etiqueta}>Contraseña</Text>
                     <View style={styles.campoContenedor}>
                         <FontAwesome name="lock" size={20} color="#007AFF" style={styles.icono} />
@@ -264,19 +313,26 @@ export default function Login({ navigation }) {
                             placeholder={"Contraseña"}
                             value={password}
                             onChangeText={setPassword}
-                            secureTextEntry={!showPassword}
+                            secureTextEntry={!showPassword} // Oculta/muestra el texto
                             autoCorrect={false}
                         />
+                        {/* Botón para mostrar/ocultar contraseña */}
                         <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                             <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#007AFF" />
                         </TouchableOpacity>
                     </View>
+                    
+                    {/* Enlace de Olvidó Contraseña */}
                     <TouchableOpacity style={styles.botonOlvido} onPress={() => setIsPasswordResetModalVisible(true)}>
                         <Text style={styles.textoOlvido}>¿Olvidaste tu contraseña?</Text>
                     </TouchableOpacity>
+                    
+                    {/* Botón Principal de Login */}
                     <TouchableOpacity style={styles.botonPrincipal} onPress={handleLogin}>
                         <Text style={styles.textoBotonPrincipal}>Iniciar Sesión</Text>
-                    </TouchableOpacity>                   
+                    </TouchableOpacity> 
+                    
+                    {/* Enlace para ir a la pantalla de Registro */}
                     <View style={styles.contenedorRegistro}>
                         <Text style={styles.textoRegistroGris}>¿No tenes cuenta? </Text>
                         <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
@@ -290,6 +346,7 @@ export default function Login({ navigation }) {
     );
 }
 
+// --- ESTILOS ---
 const styles = StyleSheet.create({
     contenedorFondo: { flex: 1 },
     scrollContenido: {
@@ -422,7 +479,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         textAlign: 'center',
         marginBottom: 15,
-        color: '#007AFF' // Color por defecto para mensajes de éxito
+        color: '#007AFF'
     },
     inputGroup: {
         flexDirection: 'row',
@@ -458,96 +515,5 @@ const styles = StyleSheet.create({
         color: '#888',
         textDecorationLine: 'underline',
         marginTop: 10,
-    },
-    textoRegistroGris: { color: '#555', fontSize: 14 },
-    textoRegistroLinkSinSubrayado: {
-        color: '#007AFF',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    contenedorLogo: {
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    bordeLogo: {
-        borderRadius: 15,
-        padding: 5,
-        borderWidth: 3,
-        borderColor: '#fff',
-        backgroundColor: '#007AFF',
-    },
-    logo: { width: 80, height: 80, borderRadius: 10 },
-    nombreApp: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#007AFF',
-        marginTop: 5,
-    },
-    titulo: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#007AFF',
-        marginBottom: 10,
-    },
-    etiqueta: {
-        alignSelf: 'flex-start',
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#007AFF',
-        marginTop: 5,
-        marginBottom: 3,
-        width: '100%',
-    },
-    campoContenedor: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f0f8ff',
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#007AFF',
-        marginBottom: 10,
-        paddingHorizontal: 10,
-        width: '100%',
-    },
-    icono: { marginRight: 10 },
-    campoEntrada: {
-        height: 40,
-        width: '85%',
-        color: '#333',
-    },
-    botonOlvido: { alignSelf: 'flex-end', marginBottom: 10 },
-    textoOlvido: { color: '#007AFF', fontSize: 13 },
-    botonPrincipal: {
-        backgroundColor: '#1E90FF',
-        paddingVertical: 12,
-        paddingHorizontal: 40,
-        borderRadius: 10,
-        marginTop: 10,
-        width: '100%',
-        alignItems: 'center',
-    },
-    textoBotonPrincipal: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    botonGoogle: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        borderWidth: 2,
-        borderColor: '#007AFF',
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 10,
-        marginTop: 10,
-        width: '100%',
-        justifyContent: 'center',
-    },
-    iconoGoogle: { marginRight: 8 },
-    textoBotonGoogle: {
-        color: '#007AFF',
-        fontSize: 14,
-        fontWeight: 'normal',
     },
 });

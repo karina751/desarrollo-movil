@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: SignUp.js
+ * FUNCIÓN: Maneja el registro de nuevos usuarios.
+ * -----------------------------------------------------------
+ * - AUTENTICACIÓN: Crea cuenta en Firebase Auth y almacena datos de perfil (Nombre/Apellido) en Firestore.
+ * - VALIDACIÓN: Implementa validación de complejidad de contraseña en tiempo real.
+ * - FLUJO CLAVE: Llama a signOut() tras el registro para forzar el inicio de sesión explícito.
+ * - UX: Usa CustomAlert y el componente PasswordRequirements para feedback inmediato.
+ */
 import React, { useState } from 'react';
 import {
     View,
@@ -14,7 +23,7 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { auth, db } from '../src/config/firebaseConfig';
-import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; // 👈 [1] IMPORTACIÓN CRÍTICA: signOut
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'; 
 import { doc, setDoc } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -284,7 +293,7 @@ export default function SignUp({ navigation }) {
                 createdAt: new Date()
             });
 
-            // C. CERRAR SESIÓN Y REDIRIGIR
+            // CERRAR SESIÓN Y REDIRIGIR
             
             //  PASO 1: Cerrar sesión inmediatamente para evitar el inicio de sesión automático
             await signOut(auth); 

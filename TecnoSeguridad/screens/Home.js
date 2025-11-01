@@ -1,3 +1,12 @@
+/**
+ * PANTALLA: Home.js
+ * FUNCIÓN: Pantalla principal que muestra contenido destacado e interactivo.
+ * -----------------------------------------------------------
+ * - DATOS: Carga el perfil del usuario (nombre/foto) y Productos Destacados desde Firestore.
+ * - COMPONENTE CLAVE: Implementa un carrusel horizontal infinito con FlatList (usando técnica de bucle).
+ * - INTERACCIÓN: Contiene el componente InteractiveSurvey para encuestas en tiempo real con Firestore.
+ * - UI: Utiliza un CustomHeader y un menú desplegable para navegación rápida a Perfil.
+ */
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react'; 
 import { 
     View, 
@@ -14,29 +23,34 @@ import {
     FlatList,
     Dimensions,
 } from 'react-native';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '../src/config/firebaseConfig';
-import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore'; 
-import { FontAwesome } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+// Importamos funciones de autenticación y la base de datos de Firebase.
+import { signOut } from 'firebase/auth'; // Función para cerrar sesión
+import { auth, db } from '../src/config/firebaseConfig'; // Instancias de Auth y Firestore
+// Importamos funciones avanzadas de Firestore para consultas y manipulación de datos.
+import { doc, getDoc, collection, query, where, getDocs, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore'; // Funciones para interactuar con Firestore
+import { FontAwesome } from '@expo/vector-icons'; // Íconos
+import { LinearGradient } from 'expo-linear-gradient'; // Componente para degradados
 
-//  DEFINICIÓN GLOBAL DE CONSTANTES DEL CARRUSEL
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = 150; 
-const ITEM_MARGIN = 15; 
-const SNAP_WIDTH = ITEM_WIDTH + ITEM_MARGIN; // Ancho total de desplazamiento
+// Definiciones de constantes para el carrusel de productos
+const { width } = Dimensions.get('window'); // Ancho de la ventana
+const ITEM_WIDTH = 150; // Ancho fijo para cada ítem del carrusel
+const ITEM_MARGIN = 15; // Margen entre ítems
+const SNAP_WIDTH = ITEM_WIDTH + ITEM_MARGIN; // Ancho total de desplazamiento para el carrusel
 
 // --- Variables de color ajustadas ---
-const VOTE_COLOR_A = '#007AFF';
-const VOTE_COLOR_B = '#4CAF50';
+const VOTE_COLOR_A = '#007AFF'; // Azul de votación/base
+const VOTE_COLOR_B = '#4CAF50'; // Verde de votación/base
 const USER_VOTE_COLOR = '#FFC107'; // Amarillo para resaltar la opción votada por el usuario
 const RED_COLOR = '#dc3545'; // Rojo para cerrar sesión/error
 
-// Componente CustomAlert (Reutilizado)
+/**
+ * CustomAlert: Componente Modal reutilizable para mostrar feedback al usuario.
+ * Muestra alertas de éxito o error con un diseño personalizado.
+ */
 const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => {
     const isSuccess = type === 'success';
-    const feedbackColor = isSuccess ? VOTE_COLOR_B : '#FF4136';
-    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle';
+    const feedbackColor = isSuccess ? VOTE_COLOR_B : '#FF4136'; // Color de feedback
+    const iconName = isSuccess ? 'check-circle' : 'exclamation-triangle'; // Ícono de feedback
 
     return (
         <Modal
@@ -48,8 +62,8 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
             <View style={customAlertStyles.modalContainer}>
                 <View style={[customAlertStyles.alertBox, { borderColor: feedbackColor, borderWidth: 2 }]}>
                     <View style={customAlertStyles.headerContainer}>
-                         <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
-                         <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
+                           <FontAwesome name={iconName} size={24} color={feedbackColor} style={{ marginRight: 10 }} />
+                           <Text style={customAlertStyles.alertTitleBase}>{title}</Text>
                     </View>
                     <Text style={customAlertStyles.alertMessageBase}>{message}</Text>
                     <TouchableOpacity 
@@ -64,6 +78,7 @@ const CustomAlert = ({ isVisible, title, message, onClose, type = 'error' }) => 
     );
 };
 
+// Estilos para el CustomAlert
 const customAlertStyles = StyleSheet.create({
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)' },
     alertBox: {
@@ -85,11 +100,14 @@ const customAlertStyles = StyleSheet.create({
     alertButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
 });
 
-// COMPONENTE ITEM DEL CARRUSEL
+/**
+ * FeaturedProductItem: Componente que renderiza una sola tarjeta de producto 
+ * para el carrusel horizontal. Usa `memo` para optimizar el rendimiento.
+ */
 const FeaturedProductItem = memo(({ item, navigation }) => (
     <TouchableOpacity 
         style={styles.featuredCard} 
-        onPress={() => console.log('Ver detalle de', item.name)} 
+        onPress={() => console.log('Ver detalle de', item.name)} // Acción actual: registrar en consola
     >
         <Image 
             source={item.image ? { uri: item.image } : { uri: 'https://via.placeholder.com/150/f0f0f0?text=Producto' }} 
@@ -104,99 +122,115 @@ const FeaturedProductItem = memo(({ item, navigation }) => (
 ));
 
 
-// NUEVO COMPONENTE: TARJETA DE RESULTADOS DE ENCUESTA
+/**
+ * InteractiveSurvey: Componente avanzado para mostrar una encuesta y sus resultados.
+ * Maneja el voto del usuario y actualiza los resultados en tiempo real desde Firestore.
+ */
 const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
-    const [userVotedOption, setUserVotedOption] = useState(null);
-    const [results, setResults] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [userVotedOption, setUserVotedOption] = useState(null); // Opción votada por el usuario actual
+    const [results, setResults] = useState(null); // Resultados de la encuesta
+    const [loading, setLoading] = useState(true); // Controla el estado de carga
 
-    const userId = auth.currentUser ? auth.currentUser.uid : 'guest';
-    const isDualOption = options.length === 2; // Bandera para el diseño de 2 opciones
+    const userId = auth.currentUser ? auth.currentUser.uid : 'guest'; // Obtiene el ID del usuario
+    const isDualOption = options.length === 2; // Bandera para usar el diseño de barra segmentada (2 opciones)
 
 
+    /**
+     * Carga el conteo total de votos y calcula los porcentajes desde Firestore.
+     */
     const fetchResults = useCallback(async (id) => {
         try {
             const responsesRef = collection(db, 'survey_responses');
             const allVotesQuery = query(responsesRef, where('survey_id', '==', id));
             const allVotesSnapshot = await getDocs(allVotesQuery);
 
-            const totalVotes = allVotesSnapshot.docs.length;
+            const totalVotes = allVotesSnapshot.docs.length; // Conteo total de votos
             const voteCounts = {}; 
 
-            options.forEach(opt => voteCounts[opt.name] = 0); 
+            options.forEach(opt => voteCounts[opt.name] = 0); // Inicializa el conteo en cero
             allVotesSnapshot.forEach(doc => {
                 const data = doc.data();
                 const votedOption = data.voted_option;
-                if (votedOption && voteCounts.hasOwnProperty(votedOption)) {
+                if (votedOption && voteCounts.hasOwnProperty(votedOption)) { // Incrementa el conteo si la opción es válida
                     voteCounts[votedOption]++;
                 }
             });
 
-            // 2. Calcular porcentajes y formatear resultados
+            // 2. Calcula el porcentaje para cada opción
             const formattedResults = options.map(opt => ({
                 name: opt.name,
                 color: opt.color,
                 count: voteCounts[opt.name],
-                percent: totalVotes > 0 ? ((voteCounts[opt.name] / totalVotes) * 100).toFixed(0) : 0,
+                percent: totalVotes > 0 ? ((voteCounts[opt.name] / totalVotes) * 100).toFixed(0) : 0, // Calcula el porcentaje
             }));
             
             setResults({
-                formattedResults,
+                formattedResults, // Resultados formateados
                 totalVotes
             });
 
         } catch (error) {
-            console.error(`Error al obtener resultados de encuesta ${surveyId}:`, error);
+            console.error(`Error al obtener resultados de encuesta ${surveyId}:`, error); // Manejo de error
         }
     }, [surveyId, options]);
 
 
+    /**
+     * Verifica si el usuario ya ha votado en esta encuesta.
+     */
     const fetchSurveyStatus = useCallback(async () => {
         setLoading(true);
         if (!auth.currentUser) {
             setLoading(false);
-            return; 
+            return; // Si no hay usuario, salimos
         }
 
         try {
             const responsesRef = collection(db, 'survey_responses');
             
-            // 1. Verificar si el usuario ya votó
+            // Consulta para verificar si hay un voto de este usuario
             const userVoteQuery = query(
                 responsesRef,
                 where('survey_id', '==', surveyId),
                 where('user_id', '==', userId),
-                limit(1)
+                limit(1) // Solo necesitamos un documento
             );
             const userVoteSnapshot = await getDocs(userVoteQuery);
 
             if (!userVoteSnapshot.empty) {
+                // Si ya votó, marcamos la opción y cargamos los resultados.
                 const votedOption = userVoteSnapshot.docs[0].data().voted_option;
                 setUserVotedOption(votedOption);
                 await fetchResults(surveyId);
             } else {
+                // Si no ha votado, reseteamos los estados.
                 setUserVotedOption(null);
                 setResults(null);
             }
         } catch (error) {
             console.error(`Error al obtener estado de encuesta ${surveyId}:`, error);
         } finally {
-            setLoading(false);
+            setLoading(false); // Finaliza la carga
         }
     }, [surveyId, userId, fetchResults]);
 
+    // Ejecuta la verificación del estado de la encuesta al cargar la vista.
     useEffect(() => {
         fetchSurveyStatus();
     }, [fetchSurveyStatus]);
 
+    /**
+     * Función para registrar el voto del usuario en Firestore.
+     */
     const handleVote = async (optionName) => {
         if (!auth.currentUser) {
             showAlert("Acceso Denegado", "Debes iniciar sesión para votar en las encuestas.");
-            return;
+            return; // Bloquea si no hay sesión iniciada
         }
 
-        setLoading(true);
+        setLoading(true); // Inicia el spinner
         try {
+            // Registra el voto en la colección 'survey_responses'.
             await addDoc(collection(db, 'survey_responses'), {
                 user_id: userId,
                 survey_id: surveyId,
@@ -204,6 +238,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
                 timestamp: new Date() 
             });
 
+            // Actualiza la UI y recarga los resultados.
             setUserVotedOption(optionName);
             await fetchResults(surveyId);
             showAlert("¡Voto Guardado!", `Tu voto por "${optionName}" ha sido registrado.`, 'success');
@@ -216,11 +251,14 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
         }
     };
 
+    /**
+     * Función que renderiza la visualización de resultados (barra segmentada o tiles).
+     */
     const renderResults = () => {
         if (!results) return null;
 
-        if (isDualOption) {
-            //  OPCIÓN 1: BARRA SEGMENTADA (Para 2 opciones)
+        if (isDualOption) { // Si solo hay dos opciones
+            // OPCIÓN 1: BARRA SEGMENTADA (Diseño visual para dos opciones)
             const resultA = results.formattedResults[0];
             const resultB = results.formattedResults[1];
 
@@ -228,18 +266,19 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
                 <View>
                     <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
                     
-                    {/* Leyendas */}
+                    {/* Leyendas con porcentajes */}
                     <View style={styles.segmentedLegendContainer}>
                         <Text style={[styles.segmentedOptionText, { color: userVotedOption === resultA.name ? USER_VOTE_COLOR : resultA.color }]}>
                             {resultA.name} ({resultA.percent}%)
                         </Text>
-                         <Text style={[styles.segmentedOptionText, { color: userVotedOption === resultB.name ? USER_VOTE_COLOR : resultB.color }]}>
+                        <Text style={[styles.segmentedOptionText, { color: userVotedOption === resultB.name ? USER_VOTE_COLOR : resultB.color }]}>
                             {resultB.name} ({resultB.percent}%)
                         </Text>
                     </View>
 
-                    {/* Barra Única Segmentada */}
+                    {/* Barra de Progreso segmentada */}
                     <View style={styles.segmentedBarContainer}>
+                        {/* Segmento A: Ancho según el porcentaje y color de voto */}
                         <View style={[
                             styles.barSegment, 
                             { 
@@ -247,6 +286,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
                                 backgroundColor: userVotedOption === resultA.name ? USER_VOTE_COLOR : resultA.color
                             }
                         ]} />
+                        {/* Segmento B */}
                         <View style={[
                             styles.barSegment, 
                             { 
@@ -259,14 +299,14 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
             );
         }
 
-        // 🚨 OPCIÓN 2: TILES DE PORCENTAJE (Para 3+ opciones, como alternativa visual)
+        // OPCIÓN 2: TILES DE PORCENTAJE (Diseño para tres o más opciones)
         return (
             <View>
                 <Text style={styles.totalVotesText}>Total de votos: {results.totalVotes}</Text>
                 
                 <View style={styles.tileResultsContainer}>
                     {results.formattedResults
-                        .sort((a, b) => b.count - a.count) 
+                        .sort((a, b) => b.count - a.count) // Ordena por la cantidad de votos
                         .map(result => (
                         <View key={result.name} style={[styles.resultTile, { backgroundColor: result.color }]}>
                             <Text style={[styles.tileName, { color: userVotedOption === result.name ? USER_VOTE_COLOR : '#fff' }]} numberOfLines={1}>
@@ -282,21 +322,21 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
         );
     };
 
-    const isVoted = userVotedOption !== null && results !== null;
+    const isVoted = userVotedOption !== null && results !== null; // Bandera si el usuario ya votó
 
     return (
         <View style={styles.surveyContainer}>
             <Text style={styles.surveyQuestion}>{question}</Text>
             
             {!isVoted ? (
-                // --- BOTONES DE VOTACIÓN ---
+                // Muestra los botones de votación si el usuario NO ha votado.
                 <View style={styles.votingButtonsContainer}>
                     {options.map(option => (
-                         <TouchableOpacity 
+                        <TouchableOpacity 
                             key={option.name}
                             style={[styles.voteButton, { backgroundColor: option.color }]}
                             onPress={() => handleVote(option.name)}
-                            disabled={loading}
+                            disabled={loading} // Deshabilita mientras carga o verifica
                         >
                             <Text style={styles.voteButtonText}>{option.name}</Text>
                         </TouchableOpacity>
@@ -304,7 +344,7 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
                 </View>
 
             ) : (
-                // RENDERIZADO DE RESULTADOS
+                // Muestra los resultados si el usuario YA votó.
                 results ? (
                     renderResults()
                 ) : (
@@ -318,21 +358,22 @@ const InteractiveSurvey = ({ surveyId, question, options, showAlert }) => {
 };
 
 
-export default function Home({ navigation }) {
-    const flatListRef = useRef(null); 
-    const [currentIndex, setCurrentIndex] = useState(0); 
+// --- COMPONENTE PRINCIPAL DE LA PANTALLA ---
+export default function Home({ navigation }) { // Componente de exportación por defecto
+    const flatListRef = useRef(null); // Referencia para controlar el desplazamiento del carrusel
+    const [currentIndex, setCurrentIndex] = useState(0); // Índice actual del carrusel
 
     // DEFINICIÓN DE LOS ESTADOS PRINCIPALES Y ALERTAS
-    const [isAlertVisible, setIsAlertVisible] = useState(false);
-    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' });
-    const [profileImage, setProfileImage] = useState(null);
-    const [userName, setUserName] = useState('');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isMenuVisible, setIsMenuVisible] = useState(false);
-    const [featuredProducts, setFeaturedProducts] = useState([]);
-    const [loopedProducts, setLoopedProducts] = useState([]);
+    const [isAlertVisible, setIsAlertVisible] = useState(false); // Controla la visibilidad del CustomAlert
+    const [alertData, setAlertData] = useState({ title: '', message: '', type: 'error' }); // Contenido del CustomAlert
+    const [profileImage, setProfileImage] = useState(null); // URL de la foto de perfil
+    const [userName, setUserName] = useState(''); // Nombre completo del usuario
+    const [isLoading, setIsLoading] = useState(true); // Bloquea la UI durante la carga
+    const [isMenuVisible, setIsMenuVisible] = useState(false); // Visibilidad del menú desplegable de perfil
+    const [featuredProducts, setFeaturedProducts] = useState([]); // Lista de productos destacados/recientes
+    const [loopedProducts, setLoopedProducts] = useState([]); // Lista duplicada para el carrusel infinito
 
-    // DEFINICIÓN DE showAlert y hideAlert (CORRECCIÓN DE ALCANCE)
+    // Funciones para manejar la visibilidad del CustomAlert
     const showAlert = (title, message, type = 'error') => {
         setAlertData({ title, message, type });
         setIsAlertVisible(true);
@@ -341,28 +382,29 @@ export default function Home({ navigation }) {
     const hideAlert = () => {
         setIsAlertVisible(false);
     };
-    // ---------------------------------------------
 
-
+    /**
+     * Función que carga todos los datos necesarios desde Firestore.
+     */
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-            // 1. Obtener datos del usuario
+            // 1. Obtener datos del usuario autenticado (nombre y foto)
             if (auth.currentUser) {
                 const userRef = doc(db, 'users', auth.currentUser.uid);
                 const docSnap = await getDoc(userRef);
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
                     setProfileImage(userData.profileImage || null);
-                    setUserName(userData.firstName + ' ' + userData.lastName);
+                    setUserName(userData.firstName + ' ' + userData.lastName); // Concatena nombre y apellido
                 }
             }
 
-            // 2. CONSULTA PARA PRODUCTOS DESTACADOS
+            // 2. Consulta para obtener productos destacados (isFeatured == true)
             const productsRef = collection(db, 'products');
             const featuredQuery = query(
                 productsRef, 
-                where('isFeatured', '==', true)
+                where('isFeatured', '==', true) // Filtro para productos destacados
             );
             const featuredSnapshot = await getDocs(featuredQuery);
             
@@ -371,17 +413,17 @@ export default function Home({ navigation }) {
                 return {
                     id: doc.id,
                     ...data,
-                    price: data.price ? String(data.price) : 'N/A', 
-                    isFeatured: data.isFeatured || false,
+                    price: data.price ? String(data.price) : 'N/A', // Asegura que el precio sea string
+                    isFeatured: data.isFeatured || false, // Estado destacado
                 };
             });
 
-            // FALLBACK: Si no hay productos marcados, cargamos los 5 más recientes
+            // FALLBACK: Si no hay productos destacados, cargamos los 5 más recientes
             if (productsList.length === 0) {
                  const allProductsQuery = query(
                     productsRef,
-                    orderBy('createdAt', 'desc'), 
-                    limit(5)
+                    orderBy('createdAt', 'desc'), // Ordena por fecha de creación
+                    limit(5) // Limita a 5 productos
                 );
                 const fallbackSnapshot = await getDocs(allProductsQuery);
                 
@@ -391,23 +433,23 @@ export default function Home({ navigation }) {
                         id: doc.id,
                         ...data,
                         price: data.price ? String(data.price) : 'N/A',
-                        isFeatured: false, 
+                        isFeatured: false, // Se marcan como no destacados en el fallback
                     };
                 });
             }
 
             setFeaturedProducts(productsList);
 
-            // CREACIÓN DEL BUCLE: Duplicamos la lista para simular un carrusel continuo
+            // 3. Creación del bucle para el carrusel infinito
             if (productsList.length > 0) {
-                // Duplicamos 10 veces para dar espacio al loop sin que se vea el final
+                // Duplica la lista 10 veces para simular el loop sin mostrar los bordes.
                 const loopList = [...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList, ...productsList].map((item, index) => ({
                     ...item,
-                    id: `${item.id}-${index}` 
+                    id: `${item.id}-${index}` // Asigna IDs únicos para evitar advertencias de React
                 }));
                 setLoopedProducts(loopList);
-                // Inicializamos el índice en el centro del bucle (quinto segmento)
-                setCurrentIndex(productsList.length * 5); 
+                // Inicia el carrusel en el centro de la lista duplicada.
+                setCurrentIndex(productsList.length * 5);
             } else {
                 setLoopedProducts([]);
                 setCurrentIndex(0);
@@ -420,6 +462,7 @@ export default function Home({ navigation }) {
         }
     }, []);
 
+    // Hook para ejecutar fetchData al montar y cada vez que la pantalla obtiene el foco.
     useEffect(() => {
         fetchData();
         const unsubscribe = navigation.addListener('focus', fetchData);
@@ -427,7 +470,7 @@ export default function Home({ navigation }) {
     }, [navigation, fetchData]);
 
 
-    // EFECTO PARA EL DESPLAZAMIENTO AUTOMÁTICO
+    // EFECTO PARA EL DESPLAZAMIENTO AUTOMÁTICO del carrusel.
     useEffect(() => {
         if (loopedProducts.length === 0) return;
 
@@ -435,34 +478,38 @@ export default function Home({ navigation }) {
             if (flatListRef.current) {
                 const nextIndex = currentIndex + 1;
                 
-                // Si llegamos cerca del final del segmento actual, reiniciamos el índice (teletransporte)
+                // Lógica de "teletransporte" para el carrusel infinito.
                 if (nextIndex >= featuredProducts.length * 9) { 
                     const resetIndex = featuredProducts.length * 5; 
-                    flatListRef.current.scrollToIndex({ index: resetIndex, animated: false });
+                    flatListRef.current.scrollToIndex({ index: resetIndex, animated: false }); // Vuelve al centro sin animación
                     setCurrentIndex(resetIndex);
                 } else {
+                    // Desplazamiento normal animado
                     flatListRef.current.scrollToIndex({ index: nextIndex, animated: true });
                     setCurrentIndex(nextIndex);
                 }
             }
         }, 3000); // Cambia de slide cada 3 segundos
 
-        return () => clearInterval(interval);
+        return () => clearInterval(interval); // Limpia el intervalo al desmontar el componente.
     }, [currentIndex, featuredProducts.length, loopedProducts.length]);
 
 
+    /**
+     * Cierra la sesión del usuario a través de Firebase Auth.
+     */
     const handleLogOut = async () => {
         try {
-            await signOut(auth);
+            await signOut(auth); // Cierra la sesión en Firebase
             showAlert("Sesión cerrada", "Has cerrado sesión correctamente.", 'success');
-
+            // La navegación al Login se maneja automáticamente por el listener en Navigation.js.
         } catch (error) {
             console.error("Error al cerrar sesión:", error);
             showAlert("Error", "Hubo un problema al cerrar sesión.");
         }
     };
     
-    // Contenido del avatar de perfil
+    // Renderiza la imagen de perfil real o un ícono genérico.
     const renderProfileAvatar = () => {
         if (profileImage) {
             return (
@@ -478,6 +525,7 @@ export default function Home({ navigation }) {
         }
     };
 
+    // Si la aplicación está en estado de carga, muestra el spinner.
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
@@ -487,8 +535,8 @@ export default function Home({ navigation }) {
         );
     }
 
-    // DETERMINAR TÍTULO DE LA SECCIÓN
-    const featuredTitle = featuredProducts.length > 0 && featuredProducts.some(p => p.isFeatured)
+    // Determina el título de la sección de productos (Destacados o Recientes).
+    const featuredTitle = featuredProducts.length > 0 && featuredProducts.some(p => p.isFeatured) 
         ? 'Productos Destacados'
         : 'Productos Recientes';
 
@@ -503,6 +551,7 @@ export default function Home({ navigation }) {
                 type={alertData.type}
             />
             
+            {/* Header: Logo, Título y Botón de Perfil */}
             <View style={styles.header}>
                 <View style={styles.logoContainer}>
                     <Image 
@@ -510,20 +559,21 @@ export default function Home({ navigation }) {
                         style={styles.logo}
                     />
                 </View>
+                {/* Al presionar el avatar, se muestra/oculta el menú desplegable. */}
                 <TouchableOpacity onPress={() => setIsMenuVisible(!isMenuVisible)}>
                     {renderProfileAvatar()}
                 </TouchableOpacity>
             </View>
 
+            {/* Menú Desplegable de Perfil */}
             {isMenuVisible && (
-                // MENÚ DESPLEGABLE CON ESTILOS RESTAURADOS
                 <View style={styles.profileMenu}>
                     <View style={styles.menuHeader}>
                         <Text style={styles.menuName}>{userName}</Text>
                     </View>
                     <TouchableOpacity style={styles.menuItem} onPress={() => {
                         setIsMenuVisible(false);
-                        navigation.navigate('Perfil');
+                        navigation.navigate('Perfil'); // Navega a la pestaña Perfil
                     }}>
                         <FontAwesome name="user" size={20} color="#007AFF" style={{ marginRight: 10 }} />
                         <Text style={styles.menuText}>Mi Perfil</Text>
@@ -536,6 +586,7 @@ export default function Home({ navigation }) {
             )}
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
+                {/* Tarjeta de Bienvenida con Degradado */}
                 <LinearGradient
                     colors={['#007AFF', '#005bb5']}
                     style={styles.welcomeCard}
@@ -548,6 +599,7 @@ export default function Home({ navigation }) {
                     </Text>
                 </LinearGradient>
 
+                {/* Sección de Acceso Rápido (Botones fijos a Productos y Servicios) */}
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Acceso Rápido</Text>
                     <View style={styles.quickAccessButtonsContainer}>
@@ -562,9 +614,9 @@ export default function Home({ navigation }) {
                     </View>
                 </View>
                 
-                {/*  SECCIÓN DE PRODUCTOS DESTACADOS (CARRUSEL) */}
+                {/* SECCIÓN DE CARRUSEL DE PRODUCTOS DESTACADOS */}
                 <View style={styles.sectionContainer}>
-                    <Text style={styles.sectionTitle}>{featuredTitle}</Text> 
+                    <Text style={styles.sectionTitle}>{featuredTitle}</Text>
                     {loopedProducts.length > 0 ? (
                         <FlatList
                             ref={flatListRef} 
@@ -577,7 +629,7 @@ export default function Home({ navigation }) {
                             snapToAlignment="start"
                             snapToInterval={SNAP_WIDTH} 
                             contentContainerStyle={styles.carouselContainer}
-                            // PROPIEDAD PARA OPTIMIZACIÓN
+                            // Propiedad para optimización de renderizado
                             getItemLayout={(data, index) => ({
                                 length: SNAP_WIDTH,
                                 offset: SNAP_WIDTH * index,
@@ -586,15 +638,15 @@ export default function Home({ navigation }) {
                             initialScrollIndex={featuredProducts.length * 5} 
                         />
                     ) : (
-                        <Text style={styles.placeholderText}>No hay productos para mostrar en este momento.</Text> 
+                        <Text style={styles.placeholderText}>No hay productos para mostrar en este momento.</Text>
                     )}
                 </View>
-                {/* FIN SECCIÓN DESTACADOS */}
 
+                {/* SECCIÓN DE ENCUESTAS INTERACTIVAS */}
                 <View style={styles.sectionContainer}>
                     <Text style={styles.sectionTitle}>Encuestas</Text>
 
-                    {/* ENCUESTA 1: TEAM CPU (Barra Segmentada) */}
+                    {/* Encuesta 1: CPU */}
                     <InteractiveSurvey 
                         surveyId="cpu_team"
                         question="¿Eres Team AMD o Team Intel?"
@@ -602,10 +654,10 @@ export default function Home({ navigation }) {
                             { name: "AMD", color: '#dc3545' }, 
                             { name: "Intel", color: '#007AFF' }
                         ]}
-                        showAlert={showAlert} 
+                        showAlert={showAlert}
                     />
 
-                    {/*  ENCUESTA 2: TEAM OS (Barra Segmentada) */}
+                    {/* Encuesta 2: OS */}
                     <InteractiveSurvey 
                         surveyId="os_team"
                         question="¿Usas Windows o Linux?"
@@ -613,9 +665,9 @@ export default function Home({ navigation }) {
                             { name: "Windows", color: '#007AFF' }, 
                             { name: "Linux", color: '#4CAF50' }
                         ]}
-                        showAlert={showAlert} 
+                        showAlert={showAlert}
                     />
-                     {/*  ENCUESTA 3: COMPONENTE VITAL (Tiles de Porcentaje) */}
+                    {/* Encuesta 3: Componente */}
                     <InteractiveSurvey 
                         surveyId="main_component"
                         question="¿Cuál es el componente más vital de tu PC?"
@@ -625,11 +677,11 @@ export default function Home({ navigation }) {
                             { name: "RAM", color: '#FFC107' },
                             { name: "Disco SSD", color: '#4CAF50' },
                         ]}
-                        showAlert={showAlert} 
+                        showAlert={showAlert}
                     />
                 </View>
-                {/* FIN SECCIÓN ENCUESTAS */}
 
+                {/* Pie de Página (Información de contacto) */}
                 <View style={styles.infoFooter}>
                     <Text style={styles.infoFooterText}>Barrio/Ciudad del Milagro, Ciudadela, Jujuy Mº37</Text>
                     <Text style={styles.infoFooterText}>Nº de Local: 21</Text>
@@ -642,6 +694,7 @@ export default function Home({ navigation }) {
     );
 }
 
+// --- ESTILOS ---
 const styles = StyleSheet.create({
     fullScreenContainer: {
         flex: 1,
@@ -820,7 +873,7 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 5,
     },
-    //  ESTILOS DEL MENÚ DESPLEGABLE 
+    //  ESTILOS DEL MENÚ DESPLEGABLE 
     profileMenu: {
         position: 'absolute',
         top: 60, 
@@ -872,7 +925,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: 'bold',
     },
-    //  ESTILOS PARA BARRA SEGMENTADA (2 OPCIONES)
+    //  ESTILOS PARA BARRA SEGMENTADA (2 OPCIONES)
     segmentedBarContainer: {
         flexDirection: 'row',
         width: '100%',
@@ -895,7 +948,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
     },
-    //  ESTILOS PARA TILES (3+ OPCIONES)
+    //  ESTILOS PARA TILES (3+ OPCIONES)
     tileResultsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
